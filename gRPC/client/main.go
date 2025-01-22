@@ -2,27 +2,41 @@ package main
 
 import (
 	"context"
-	pb "grpc_demo_client/proto"
 	"log"
+	"net"
+
+	pb "grpc_demo_client/proto"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
+type chatServer struct {
+	pb.UnimplementedMessagerServer
+}
+
+func (s *gateServer) Auth(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
+	verdict := false
+	var message string
+
+	if req.Name == "Кирилл" {
+		verdict = true
+		message = "Здарова "
+	} else {
+		message = "Ну ты что, всем дурак? "
+	}
+
+	return &pb.HelloResponse{Message: message + req.Name, Pass: verdict}, nil
+}
+
 func main() {
-	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatalf("Не удалось подключиться: %v", err)
+		log.Fatalf("Ошибка запуска сервера: %v", err)
 	}
-	defer conn.Close()
-
-	client := pb.NewGateClient(conn)
-	resp, err := client.Auth(context.Background(), &pb.HelloRequest{Name: "Кирилл"})
-
-	if err != nil {
-		log.Fatalf("Ошибка вызова RPC: %v", err)
+	s := grpc.NewServer()
+	pb.RegisterGateServer(s, &gateServer{})
+	log.Println("Сервер запущен на :50051")
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Ошибка: %v", err)
 	}
-
-	log.Printf("Ответ сервера: %s", resp.Message)
-
 }
