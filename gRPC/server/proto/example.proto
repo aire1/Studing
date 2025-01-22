@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package example;
+option go_package = "/proto;grpc_demo_client"; // Замените на ваш путь
+
+// Сервис с примером RPC
+service Gate {
+  rpc Auth (HelloRequest) returns (HelloResponse);
+}
+
+// Запрос
+message HelloRequest {
+  string name = 1;
+}
+
+// Ответ
+message HelloResponse {
+  string message = 1;
+  bool pass = 2;
+}
