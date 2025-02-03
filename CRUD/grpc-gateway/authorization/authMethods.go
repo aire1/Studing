@@ -25,7 +25,7 @@ type AuthData struct {
 func (s *AuthServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskIdResponse, error) {
 	log.Println("New auth request!")
 
-	taskId := uuid.New().String()
+	taskId := "getAuthorization_task:" + uuid.New().String()
 	err := rd.Client.Set(ctx, taskId, "pending", time.Hour*1).Err()
 	if err != nil {
 		return &pb.TaskIdResponse{
@@ -44,7 +44,7 @@ func (s *AuthServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*p
 		log.Fatalf("Failed to marshal data: %v", err)
 	}
 
-	kp.Produce("authorizations", kafka.Message{
+	kp.Produce("get_authorizations", kafka.Message{
 		Key:   []byte(req.Login),
 		Value: jsonData,
 	})

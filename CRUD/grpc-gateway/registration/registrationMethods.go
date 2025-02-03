@@ -25,7 +25,7 @@ type RegistrationData struct {
 func (s *RegistrationServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskIdResponse, error) {
 	log.Println("New register request!")
 
-	taskId := uuid.New().String()
+	taskId := "registration_task:" + uuid.New().String()
 	err := rd.Client.Set(ctx, taskId, "pending", time.Hour*1).Err()
 	if err != nil {
 		return &pb.TaskIdResponse{

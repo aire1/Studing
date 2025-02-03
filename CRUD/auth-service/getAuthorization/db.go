@@ -1,4 +1,4 @@
-package authorizatrion
+package get_authorizatrion
 
 import (
 	"context"
