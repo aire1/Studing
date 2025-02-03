@@ -8,12 +8,12 @@ RUN go mod download
 
 # Копируем остальные файлы и собираем приложение
 COPY . .
-RUN go build -o grpc-gateway .
+RUN go build -o auth-service .
 
 # Используем минимальный образ для финального контейнера
 FROM ubuntu:22.04
 
 WORKDIR /app
-COPY --from=builder /app/grpc-gateway .
+COPY --from=builder /app/auth-service .
 
-CMD ["./grpc-gateway"]
+CMD ["./auth-service"]

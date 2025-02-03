@@ -4,14 +4,10 @@ package gate;
 option go_package = "/proto;crud";
 
 service Gate {
-    rpc Authentication(AuthRequest) returns (AuthResponse);
-    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc Authorization(AuthRequest) returns (TaskIdResponse);
+    rpc Register(RegisterRequest) returns (TaskIdResponse);
     rpc GetNotes(NoteRequest) returns (NoteResponce);
-}
-
-message AuthResponse {
-    string token = 1;
-    int32 expires_in = 2;
+    rpc GetTaskStatus(TaskRequest) returns (TaskResponse);
 }
 
 message AuthRequest {
@@ -24,12 +20,20 @@ message RegisterRequest {
     string passhash = 2;
 }
 
-message RegisterResponse {
-    string message = 1;
+message TaskIdResponse {
+    string message =1;
 }
 
 message NoteRequest {
     //Пустое сообщение, так как все данные уже есть в JWT
+}
+
+message TaskRequest {
+    string taskid = 1;
+}
+
+message TaskResponse {
+    string status = 1;
 }
 
 message NoteResponce {

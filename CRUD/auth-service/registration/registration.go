@@ -2,20 +2,13 @@ package registration
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	rd "common-libs/redis"
+	auth "crud/auth-service/authorization"
 )
-
-type RegistrationData struct {
-	Login    string `json:"login"`
-	Passhash string `json:"passhash"`
-	Taskid   string `json:"taskid"`
-}
 
 // func Authentication(ctx context.Context) error {
 // 	passhash, err := GetUserPasshash(req.Login)
@@ -34,22 +27,17 @@ type RegistrationData struct {
 // 	return nil, status.Errorf(codes.Unauthenticated, "invalid credentials")
 // }
 
-func Register(ctx context.Context, data RegistrationData) error {
-	passhash, err := GetUserPasshash(data.Login)
-	if err != nil {
+func Register(ctx context.Context, data auth.AuthData) error {
+	passhash, err := auth.GetUserPasshash(data.Login)
+	if err != nil && err.Error() != "no rows in result set" {
 		return errors.Errorf("can't get user: %v", err)
 	} else if passhash != "" {
 		return errors.Errorf("user already exists")
 	}
 
 	err = RegisterClient(data.Login, data.Passhash)
-	if err != nil {
+	if err != nil && err.Error() != "no rows in result set" {
 		return status.Errorf(codes.Internal, "could not register user: %v", err)
-	}
-
-	err = rd.Client.Set(ctx, data.Taskid, "success", 1*time.Hour).Err()
-	if err != nil {
-		return errors.Errorf("can't push result into Redis: %v", err)
 	}
 
 	return nil

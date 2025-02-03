@@ -1,7 +1,9 @@
 version: '3.7'
 services:
   grpc-gateway:
-    build: ./grpc-gateway
+    build: 
+      context: ./grpc-gateway
+      dockerfile: Dockerfile
     container_name: grpc-gateway
     ports:
       - "50050:50050"
@@ -15,18 +17,36 @@ services:
     networks:
       - kafka-net
       - redis-net
+  auth-service:
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+      - redis
+    volumes:
+      - auth-service_data:/var/lib/auth-service/data
+    networks:
+      - kafka-net
+      - redis-net
+      - postgres-net
   kafka1:
     image: confluentinc/cp-kafka:latest
     container_name: kafka1
     ports:
-      - "9092:9092"
+      - "19092:19092"
     environment:
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka1:9092,EXTERNAL://localhost:19092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
       KAFKA_KRAFT_MODE: "true"
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_NODE_ID: "1"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka1:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "3"
@@ -43,14 +63,16 @@ services:
     image: confluentinc/cp-kafka:latest
     container_name: kafka2
     ports:
-      - "9094:9092"
+      - "19094:19094"
     environment:
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19094,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka2:9092,EXTERNAL://localhost:19094"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
       KAFKA_KRAFT_MODE: "true"
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_NODE_ID: "2"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka2:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "3"
@@ -67,14 +89,16 @@ services:
     image: confluentinc/cp-kafka:latest
     container_name: kafka3
     ports:
-      - "9096:9092"
+      - "19096:19096"
     environment:
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19096,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka3:9092,EXTERNAL://localhost:19096"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
       KAFKA_KRAFT_MODE: "true"
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_NODE_ID: "3"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka3:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "3"
@@ -96,6 +120,21 @@ services:
       - redis-net
     restart: always
 
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: study
+    ports:
+      - "5433:5432"
+    networks:
+      - postgres-net
+    volumes:
+      - postgres_data:/var/lib/posgres/data
+    restart: always
+
 volumes:
   kafka1_data:
     driver: local
@@ -105,9 +144,15 @@ volumes:
     driver: local
   grpc-gateway_data:
     driver: local
+  postgres_data:
+    driver: local
+  auth-service_data:
+    driver: local
 
 networks:
   kafka-net:
     driver: bridge
   redis-net:
+    driver: bridge
+  postgres-net:
     driver: bridge

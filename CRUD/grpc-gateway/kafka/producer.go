@@ -11,9 +11,10 @@ import (
 func Produce(topic string, msg kafka.Message) {
 	// Создаём продюсер
 	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"}, // Адрес Kafka
-		Topic:    topic,                                                 // Название топика
-		Balancer: &kafka.LeastBytes{},                                   // Балансировка нагрузки
+		// Brokers:  []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"}, // Адрес Kafka
+		Brokers:  []string{"localhost:19092", "localhost:19094", "localhost:19096"},
+		Topic:    topic,               // Название топика
+		Balancer: &kafka.LeastBytes{}, // Балансировка нагрузки
 	})
 	defer writer.Close()
 

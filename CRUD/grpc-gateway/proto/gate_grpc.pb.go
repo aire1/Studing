@@ -17,9 +17,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GateClient interface {
-	Authentication(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskIdResponse, error)
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*TaskIdResponse, error)
 	GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*NoteResponce, error)
+	GetTaskStatus(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 }
 
 type gateClient struct {
@@ -30,17 +31,17 @@ func NewGateClient(cc grpc.ClientConnInterface) GateClient {
 	return &gateClient{cc}
 }
 
-func (c *gateClient) Authentication(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
-	out := new(AuthResponse)
-	err := c.cc.Invoke(ctx, "/gate.Gate/Authentication", in, out, opts...)
+func (c *gateClient) Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskIdResponse, error) {
+	out := new(TaskIdResponse)
+	err := c.cc.Invoke(ctx, "/gate.Gate/Authorization", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *gateClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
-	out := new(RegisterResponse)
+func (c *gateClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*TaskIdResponse, error) {
+	out := new(TaskIdResponse)
 	err := c.cc.Invoke(ctx, "/gate.Gate/Register", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -57,13 +58,23 @@ func (c *gateClient) GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc
 	return out, nil
 }
 
+func (c *gateClient) GetTaskStatus(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+	out := new(TaskResponse)
+	err := c.cc.Invoke(ctx, "/gate.Gate/GetTaskStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GateServer is the server API for Gate service.
 // All implementations must embed UnimplementedGateServer
 // for forward compatibility
 type GateServer interface {
-	Authentication(context.Context, *AuthRequest) (*AuthResponse, error)
-	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	Authorization(context.Context, *AuthRequest) (*TaskIdResponse, error)
+	Register(context.Context, *RegisterRequest) (*TaskIdResponse, error)
 	GetNotes(context.Context, *NoteRequest) (*NoteResponce, error)
+	GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error)
 	mustEmbedUnimplementedGateServer()
 }
 
@@ -71,14 +82,17 @@ type GateServer interface {
 type UnimplementedGateServer struct {
 }
 
-func (UnimplementedGateServer) Authentication(context.Context, *AuthRequest) (*AuthResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Authentication not implemented")
+func (UnimplementedGateServer) Authorization(context.Context, *AuthRequest) (*TaskIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Authorization not implemented")
 }
-func (UnimplementedGateServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+func (UnimplementedGateServer) Register(context.Context, *RegisterRequest) (*TaskIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedGateServer) GetNotes(context.Context, *NoteRequest) (*NoteResponce, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotes not implemented")
+}
+func (UnimplementedGateServer) GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTaskStatus not implemented")
 }
 func (UnimplementedGateServer) mustEmbedUnimplementedGateServer() {}
 
@@ -93,20 +107,20 @@ func RegisterGateServer(s *grpc.Server, srv GateServer) {
 	s.RegisterService(&_Gate_serviceDesc, srv)
 }
 
-func _Gate_Authentication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Gate_Authorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AuthRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GateServer).Authentication(ctx, in)
+		return srv.(GateServer).Authorization(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/gate.Gate/Authentication",
+		FullMethod: "/gate.Gate/Authorization",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GateServer).Authentication(ctx, req.(*AuthRequest))
+		return srv.(GateServer).Authorization(ctx, req.(*AuthRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -147,13 +161,31 @@ func _Gate_GetNotes_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gate_GetTaskStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GateServer).GetTaskStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gate.Gate/GetTaskStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GateServer).GetTaskStatus(ctx, req.(*TaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Gate_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gate.Gate",
 	HandlerType: (*GateServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Authentication",
-			Handler:    _Gate_Authentication_Handler,
+			MethodName: "Authorization",
+			Handler:    _Gate_Authorization_Handler,
 		},
 		{
 			MethodName: "Register",
@@ -162,6 +194,10 @@ var _Gate_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNotes",
 			Handler:    _Gate_GetNotes_Handler,
+		},
+		{
+			MethodName: "GetTaskStatus",
+			Handler:    _Gate_GetTaskStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

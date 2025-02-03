@@ -1,4 +1,4 @@
-package auth
+package authorization
 
 import (
 	"context"
@@ -14,29 +14,26 @@ import (
 	rd "crud/grpc-gateway/common-libs/redis"
 )
 
-type GateServer struct {
-	pb.UnimplementedGateServer
-	//mu sync.Mutex
-}
+type AuthServer struct{}
 
-type RegistrationData struct {
+type AuthData struct {
 	Login    string `json:"login"`
 	Passhash string `json:"passhash"`
 	Taskid   string `json:"taskid"`
 }
 
-func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	log.Println("New req!")
+func (s *AuthServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskIdResponse, error) {
+	log.Println("New auth request!")
 
 	taskId := uuid.New().String()
 	err := rd.Client.Set(ctx, taskId, "pending", time.Hour*1).Err()
 	if err != nil {
-		return &pb.RegisterResponse{
+		return &pb.TaskIdResponse{
 			Message: "internal error",
 		}, err
 	}
 
-	data := RegistrationData{
+	data := AuthData{
 		Login:    req.Login,
 		Passhash: req.Passhash,
 		Taskid:   taskId,
@@ -47,12 +44,12 @@ func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 		log.Fatalf("Failed to marshal data: %v", err)
 	}
 
-	kp.Produce("registrations", kafka.Message{
+	kp.Produce("authorizations", kafka.Message{
 		Key:   []byte(req.Login),
 		Value: jsonData,
 	})
 
-	return &pb.RegisterResponse{
+	return &pb.TaskIdResponse{
 		Message: taskId,
 	}, nil //возвращаем taskId задачи клиенту
 }

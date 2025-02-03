@@ -13,7 +13,7 @@ var (
 )
 
 func CreatePool() {
-	Pool, err = pgxpool.New(context.Background(), "postgresql://admin:admin@localhost:5433/postgres")
+	Pool, err = pgxpool.New(context.Background(), "postgresql://admin:admin@postgres:5433/postgres")
 	if err != nil {
 		log.Fatalf("unable to connect to database: %s", err.Error())
 	}
