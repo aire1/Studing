@@ -6,34 +6,41 @@ import (
 	pb "crud/grpc-gateway/proto"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
-	rd "crud/grpc-gateway/common-libs/redis"
+	rd "crud/common-libs/redis"
+	shared "crud/common-libs/shared"
 )
 
 type RegistrationServer struct{}
 
-type RegistrationData struct {
-	Login    string `json:"login"`
-	Passhash string `json:"passhash"`
-	Taskid   string `json:"taskid"`
-}
-
-func (s *RegistrationServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskIdResponse, error) {
-	log.Println("New register request!")
-
+func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 	taskId := "registration_task:" + uuid.New().String()
-	err := rd.Client.Set(ctx, taskId, "pending", time.Hour*1).Err()
-	if err != nil {
-		return &pb.TaskIdResponse{
-			Message: "internal error",
-		}, err
+
+	taskStatus := shared.AuthorizationCheckStatus{
+		Result: "pending",
 	}
 
-	data := RegistrationData{
+	json_b, err := json.Marshal(taskStatus)
+	if err != nil {
+		return "", err
+	}
+
+	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
+		return "", err
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	data := shared.RegistrationData{
 		Login:    req.Login,
 		Passhash: req.Passhash,
 		Taskid:   taskId,
@@ -49,7 +56,29 @@ func (s *RegistrationServer) Register(ctx context.Context, req *pb.RegisterReque
 		Value: jsonData,
 	})
 
-	return &pb.TaskIdResponse{
-		Message: taskId,
-	}, nil //возвращаем taskId задачи клиенту
+	return taskId, nil
+}
+
+func (s *RegistrationServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskResponse, error) {
+	log.Println("New register request!")
+
+	taskId, err := createTask(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Internal server error: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	pbRes, err := shared.WaitForCompleteTask(rd.Client, taskId, ctx)
+	if err != nil {
+		if strings.Contains(err.Error(), "context deadline exceeded") {
+			return &pb.TaskResponse{
+				Status: "timeout",
+				Info:   taskId,
+			}, nil
+		}
+		return nil, err
+	}
+	return pbRes, nil
 }

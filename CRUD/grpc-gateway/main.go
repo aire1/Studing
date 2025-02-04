@@ -7,8 +7,8 @@ import (
 
 	"google.golang.org/grpc"
 
+	rd "crud/common-libs/redis"
 	auth "crud/grpc-gateway/authorization"
-	rd "crud/grpc-gateway/common-libs/redis"
 	pb "crud/grpc-gateway/proto"
 	reg "crud/grpc-gateway/registration"
 	tasks "crud/grpc-gateway/tasks"
@@ -25,7 +25,7 @@ func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*p
 	return s.TasksServer.GetTaskStatus(ctx, req)
 }
 
-func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskIdResponse, error) {
+func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskResponse, error) {
 	return s.RegistrationServer.Register(ctx, req)
 }
 

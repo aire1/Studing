@@ -8,15 +8,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	auth "crud/auth-service/getAuthorization"
+	shared "crud/common-libs/shared"
 )
 
-type RegData struct {
-	Login    string `json:"login"`
-	Passhash string `json:"passhash"`
-	Taskid   string `json:"taskid"`
-}
-
-func Register(ctx context.Context, data RegData) error {
+func Register(ctx context.Context, data shared.RegistrationData) error {
 	passhash, err := auth.GetUserPasshash(data.Login)
 	if err != nil && err.Error() != "no rows in result set" {
 		return errors.Errorf("can't get user: %v", err)

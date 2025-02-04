@@ -4,31 +4,38 @@ import (
 	"context"
 	pb "crud/grpc-gateway/proto"
 	"log"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	rd "crud/grpc-gateway/common-libs/redis"
+	rd "crud/common-libs/redis"
+	shared "crud/common-libs/shared"
 )
 
 type TasksServer struct{}
 
-type RegistrationData struct {
-	Login    string `json:"login"`
-	Passhash string `json:"passhash"`
-	Taskid   string `json:"taskid"`
-}
-
 func (s *TasksServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
 	log.Println("New task status request!")
 
-	res, err := rd.Client.Get(ctx, req.Taskid).Result()
+	v, err := shared.GetTaskFromRedis(rd.Client, ctx, req.Taskid)
 	if err != nil {
-		return &pb.TaskResponse{}, status.Errorf(codes.Internal, "error getting task from redis")
+		return nil, status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
-	return &pb.TaskResponse{
-		Status: res,
-	}, nil
+	var pbResponse pb.TaskResponse
 
+	switch {
+	case strings.HasPrefix(req.Taskid, shared.RegistrationStatusPrefix):
+		pbResponse.Status = v.(shared.RegistrationStatus).Result
+		pbResponse.Info = v.(shared.RegistrationStatus).Info
+	case strings.HasPrefix(req.Taskid, shared.AuthorizationGetStatusPrefix):
+		pbResponse.Status = v.(shared.AuthorizationGetStatus).Result
+		pbResponse.Info = v.(shared.AuthorizationGetStatus).Info
+	case strings.HasPrefix(req.Taskid, shared.AuthorizationCheckStatusPrefix):
+		pbResponse.Status = v.(shared.AuthorizationCheckStatus).Result
+		pbResponse.Info = v.(shared.AuthorizationCheckStatus).Info
+	}
+
+	return &pbResponse, nil
 }

@@ -11,29 +11,38 @@ import (
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 
-	rd "crud/grpc-gateway/common-libs/redis"
+	rd "crud/common-libs/redis"
+
+	shared "crud/common-libs/shared"
 )
 
 type AuthServer struct{}
-
-type AuthData struct {
-	Login    string `json:"login"`
-	Passhash string `json:"passhash"`
-	Taskid   string `json:"taskid"`
-}
 
 func (s *AuthServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskIdResponse, error) {
 	log.Println("New auth request!")
 
 	taskId := "getAuthorization_task:" + uuid.New().String()
-	err := rd.Client.Set(ctx, taskId, "pending", time.Hour*1).Err()
+
+	taskStatus := shared.AuthorizationCheckStatus{
+		Result: "pending",
+	}
+
+	json_b, err := json.Marshal(taskStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
+		return nil, err
+	}
+
 	if err != nil {
 		return &pb.TaskIdResponse{
 			Message: "internal error",
 		}, err
 	}
 
-	data := AuthData{
+	data := shared.AuthorizationGetData{
 		Login:    req.Login,
 		Passhash: req.Passhash,
 		Taskid:   taskId,

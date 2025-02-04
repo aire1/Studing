@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
-	rd "crud/auth-service/common-libs/redis"
+	rd "crud/common-libs/redis"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
+
+	shared "crud/common-libs/shared"
 )
 
 // Secret key для подписи JWT
@@ -31,13 +33,7 @@ func StoreTokenInRedis(userID, token string) error {
 	return err
 }
 
-type AuthData struct {
-	Login    string `json:"login"`
-	Passhash string `json:"passhash"`
-	Taskid   string `json:"taskid"`
-}
-
-func Authorize(ctx context.Context, data AuthData) error {
+func Authorize(ctx context.Context, data shared.AuthorizationGetData) error {
 	passhash, err := GetUserPasshash(data.Login)
 	if err != nil {
 		return errors.Errorf("can't get user: %v", err)

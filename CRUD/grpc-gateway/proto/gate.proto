@@ -5,7 +5,7 @@ option go_package = "/proto;crud";
 
 service Gate {
     rpc Authorization(AuthRequest) returns (TaskIdResponse);
-    rpc Register(RegisterRequest) returns (TaskIdResponse);
+    rpc Register(RegisterRequest) returns (TaskResponse);
     rpc GetNotes(NoteRequest) returns (NoteResponce);
     rpc GetTaskStatus(TaskRequest) returns (TaskResponse);
 }
@@ -34,6 +34,7 @@ message TaskRequest {
 
 message TaskResponse {
     string status = 1;
+    string info = 2;
 }
 
 message NoteResponce {

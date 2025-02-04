@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pg "crud/auth-service/common-libs/postgres"
+	pg "crud/common-libs/postgres"
 )
 
 func RegisterClient(username string, passhash string) error {

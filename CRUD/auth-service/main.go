@@ -7,22 +7,19 @@ import (
 	"log"
 	"time"
 
-	pg "crud/auth-service/common-libs/postgres"
-	rd "crud/auth-service/common-libs/redis"
+	pg "crud/common-libs/postgres"
+	//rd "crud/auth-service/common-libs/redis"
+
+	rd "crud/common-libs/redis"
 
 	authCheck "crud/auth-service/checkAuthorization"
 	authGet "crud/auth-service/getAuthorization"
 	reg "crud/auth-service/registration"
 
+	shared "crud/common-libs/shared"
+
 	"github.com/segmentio/kafka-go"
 )
-
-func pushRedis(ctx context.Context, key string, value interface{}, expiration time.Duration) {
-	err := rd.Client.Set(ctx, key, value, expiration).Err()
-	if err != nil {
-		log.Printf("can't push result into Redis: %v\n", err)
-	}
-}
 
 func main() {
 	rd.Init()
@@ -69,7 +66,7 @@ func main() {
 	log.Println("Подключился к Kafka")
 
 	go func(reader *kafka.Reader) {
-		var data reg.RegData
+		var data shared.RegistrationData
 		for {
 			message, err := reader.FetchMessage(context.Background())
 			if err != nil {
@@ -82,14 +79,25 @@ func main() {
 				continue
 			}
 
-			go func(data reg.RegData) {
+			go func(data shared.RegistrationData) {
+				status := shared.RegistrationStatus{
+					Result: "success",
+					Info:   "",
+				}
+
 				err = reg.Register(context.Background(), data)
 
 				if err != nil {
 					log.Printf("failed to register user: %v", err)
-					pushRedis(context.Background(), data.Taskid, "fail", 1*time.Hour)
+
+					status.Result = "fail"
+					status.Info = err.Error()
+				}
+
+				if json_data, err := json.Marshal(status); err == nil {
+					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
 				} else {
-					pushRedis(context.Background(), data.Taskid, "success", 1*time.Hour)
+					log.Printf("failed to marshal status info")
 				}
 			}(data)
 
@@ -103,7 +111,7 @@ func main() {
 	}(reader_reg)
 
 	go func(reader *kafka.Reader) {
-		var data authGet.AuthData
+		var data shared.AuthorizationGetData
 		for {
 			message, err := reader.FetchMessage(context.Background())
 			if err != nil {
@@ -116,14 +124,24 @@ func main() {
 				continue
 			}
 
-			go func(data authGet.AuthData) {
-				if err = authGet.Authorize(context.Background(), data); err != nil {
-					log.Printf("failed to auth user: %v", err)
-					pushRedis(context.Background(), data.Taskid, "fail", 1*time.Hour)
-					return
+			go func(data shared.AuthorizationGetData) {
+				status := shared.AuthorizationGetStatus{
+					Result: "success",
+					Info:   "",
 				}
 
-				pushRedis(context.Background(), data.Taskid, "success", 1*time.Hour)
+				if err = authGet.Authorize(context.Background(), data); err != nil {
+					log.Printf("failed to auth user: %v", err)
+
+					status.Result = "fail"
+					status.Info = err.Error()
+				}
+
+				if json_data, err := json.Marshal(status); err == nil {
+					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
+				} else {
+					log.Printf("failed to marshal status info")
+				}
 			}(data)
 
 			fmt.Printf("Получено сообщение: %v\n", data)
@@ -136,7 +154,7 @@ func main() {
 	}(reader_auth)
 
 	go func(reader *kafka.Reader) {
-		var data authCheck.AuthData
+		var data shared.AuthorizationCheckData
 		for {
 			message, err := reader.FetchMessage(context.Background())
 			if err != nil {
@@ -149,16 +167,25 @@ func main() {
 				continue
 			}
 
-			go func(data authCheck.AuthData) {
+			go func(data shared.AuthorizationCheckData) {
+				status := shared.AuthorizationCheckStatus{
+					Result: "success",
+					Info:   "",
+				}
+
 				if res, err := authCheck.CheckAuthorization(context.Background(), data); err != nil {
 					log.Printf("failed to auth user: %v", err)
-					pushRedis(context.Background(), data.Taskid, "fail", 1*time.Hour)
+					status.Result = "fail"
+					status.Info = err.Error()
 				} else if !res {
 					log.Printf("denied to auth user %s", data.Username)
-					pushRedis(context.Background(), data.Taskid, "denied", 1*time.Hour)
+					status.Result = "denied"
+				}
+
+				if json_data, err := json.Marshal(status); err == nil {
+					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
 				} else {
-					log.Printf("auth user success %s", data.Username)
-					pushRedis(context.Background(), data.Taskid, "success", 1*time.Hour)
+					log.Printf("failed to marshal status info")
 				}
 			}(data)
 
