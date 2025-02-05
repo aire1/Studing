@@ -47,7 +47,7 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 		log.Fatalf("Failed to marshal data: %v", err)
 	}
 
-	kp.Produce("registrations", kafka.Message{
+	kp.KafkaProducer.Produce("registrations", kafka.Message{
 		Key:   []byte(req.Login),
 		Value: jsonData,
 	})

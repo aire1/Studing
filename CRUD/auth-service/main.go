@@ -54,7 +54,7 @@ func main() {
 	reader_auth_checks := kafka.NewReader(kafka.ReaderConfig{
 		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
 		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
-		Topic:          "authorizations",
+		Topic:          "check_authorizations",
 		GroupID:        "Auth-service",
 		MinBytes:       10e3,
 		MaxBytes:       10e6,
@@ -173,13 +173,10 @@ func main() {
 					Info:   "",
 				}
 
-				if res, err := authCheck.CheckAuthorization(context.Background(), data); err != nil {
-					log.Printf("failed to auth user: %v", err)
+				if err := authCheck.CheckAuthorization(context.Background(), data); err != nil {
+					log.Printf("denied to auth user: %v", err)
 					status.Result = "fail"
 					status.Info = err.Error()
-				} else if !res {
-					log.Printf("denied to auth user %s", data.Username)
-					status.Result = "denied"
 				}
 
 				if json_data, err := json.Marshal(status); err == nil {

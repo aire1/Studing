@@ -6,9 +6,12 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	rd "crud/common-libs/redis"
 	auth "crud/grpc-gateway/authorization"
+	kafka "crud/grpc-gateway/kafka"
 	pb "crud/grpc-gateway/proto"
 	reg "crud/grpc-gateway/registration"
 	tasks "crud/grpc-gateway/tasks"
@@ -22,6 +25,15 @@ type GateServer struct {
 }
 
 func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
+	log.Println("start")
+	res, err := auth.CheckAuthorization(ctx)
+	if err != nil {
+		return nil, err
+	} else if !res {
+		return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
+	}
+	log.Println("stop")
+
 	return s.TasksServer.GetTaskStatus(ctx, req)
 }
 
@@ -29,13 +41,16 @@ func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 	return s.RegistrationServer.Register(ctx, req)
 }
 
-func (s *GateServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskResponse, error) {
-	return s.AuthServer.Authorization(ctx, req)
+func (s *GateServer) GetAuthorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskResponse, error) {
+	return s.AuthServer.GetAuthorization(ctx, req)
 }
 
 func main() {
 	rd.Init()
 	defer rd.Client.Close()
+
+	kafka.Init()
+	defer kafka.KafkaProducer.Close()
 
 	lis, err := net.Listen("tcp", ":50050")
 	if err != nil {

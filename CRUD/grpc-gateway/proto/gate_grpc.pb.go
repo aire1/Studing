@@ -17,7 +17,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GateClient interface {
-	Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error)
+	GetAuthorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*NoteResponce, error)
 	GetTaskStatus(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
@@ -31,9 +31,9 @@ func NewGateClient(cc grpc.ClientConnInterface) GateClient {
 	return &gateClient{cc}
 }
 
-func (c *gateClient) Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+func (c *gateClient) GetAuthorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
 	out := new(TaskResponse)
-	err := c.cc.Invoke(ctx, "/gate.Gate/Authorization", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/gate.Gate/GetAuthorization", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (c *gateClient) GetTaskStatus(ctx context.Context, in *TaskRequest, opts ..
 // All implementations must embed UnimplementedGateServer
 // for forward compatibility
 type GateServer interface {
-	Authorization(context.Context, *AuthRequest) (*TaskResponse, error)
+	GetAuthorization(context.Context, *AuthRequest) (*TaskResponse, error)
 	Register(context.Context, *RegisterRequest) (*TaskResponse, error)
 	GetNotes(context.Context, *NoteRequest) (*NoteResponce, error)
 	GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error)
@@ -82,8 +82,8 @@ type GateServer interface {
 type UnimplementedGateServer struct {
 }
 
-func (UnimplementedGateServer) Authorization(context.Context, *AuthRequest) (*TaskResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Authorization not implemented")
+func (UnimplementedGateServer) GetAuthorization(context.Context, *AuthRequest) (*TaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAuthorization not implemented")
 }
 func (UnimplementedGateServer) Register(context.Context, *RegisterRequest) (*TaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
@@ -107,20 +107,20 @@ func RegisterGateServer(s *grpc.Server, srv GateServer) {
 	s.RegisterService(&_Gate_serviceDesc, srv)
 }
 
-func _Gate_Authorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Gate_GetAuthorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AuthRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GateServer).Authorization(ctx, in)
+		return srv.(GateServer).GetAuthorization(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/gate.Gate/Authorization",
+		FullMethod: "/gate.Gate/GetAuthorization",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GateServer).Authorization(ctx, req.(*AuthRequest))
+		return srv.(GateServer).GetAuthorization(ctx, req.(*AuthRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -184,8 +184,8 @@ var _Gate_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*GateServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Authorization",
-			Handler:    _Gate_Authorization_Handler,
+			MethodName: "GetAuthorization",
+			Handler:    _Gate_GetAuthorization_Handler,
 		},
 		{
 			MethodName: "Register",

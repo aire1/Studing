@@ -4,28 +4,73 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/segmentio/kafka-go"
 )
 
-func Produce(topic string, msg kafka.Message) {
-	// Создаём продюсер
-	writer := kafka.NewWriter(kafka.WriterConfig{
-		// Brokers:  []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"}, // Адрес Kafka
-		Brokers:  []string{"localhost:19092", "localhost:19094", "localhost:19096"},
-		Topic:    topic,               // Название топика
-		Balancer: &kafka.LeastBytes{}, // Балансировка нагрузки
-	})
-	defer writer.Close()
+// Producer хранит писатели для разных топиков
+type Producer struct {
+	writers map[string]*kafka.Writer
+	mu      sync.RWMutex
+}
 
-	// msg := kafka.Message{
-	// 	Key:   []byte("reg"),
-	// 	Value: []byte("Hello, kafka!"),
-	// }
+var (
+	KafkaProducer *Producer
+)
+
+// Создаём новый продюсер
+func NewProducer(brokers []string, topics []string) *Producer {
+	producer := &Producer{
+		writers: make(map[string]*kafka.Writer),
+	}
+
+	// Создаём writer'ов для каждого топика
+	for _, topic := range topics {
+		producer.writers[topic] = &kafka.Writer{
+			Addr:     kafka.TCP(brokers...),
+			Topic:    topic,
+			Balancer: &kafka.LeastBytes{},
+		}
+	}
+
+	return producer
+}
+
+// Метод для отправки сообщений
+func (p *Producer) Produce(topic string, msg kafka.Message) {
+	p.mu.RLock()
+	writer, exists := p.writers[topic]
+	p.mu.RUnlock()
+
+	if !exists {
+		log.Printf("Ошибка: продюсер для топика '%s' не создан\n", topic)
+		return
+	}
 
 	err := writer.WriteMessages(context.Background(), msg)
 	if err != nil {
-		log.Fatal("Ошибка при отправке:", err)
+		log.Println("Ошибка при отправке:", err)
+	} else {
+		fmt.Println("Сообщение отправлено в топик:", topic)
 	}
-	fmt.Println("Сообщение отправлено")
+}
+
+// Закрываем всех writer'ов при завершении работы
+func (p *Producer) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for topic, writer := range p.writers {
+		writer.Close()
+		delete(p.writers, topic)
+		fmt.Println("Закрыт продюсер для топика:", topic)
+	}
+}
+
+func Init() {
+	brokers := []string{"localhost:19092", "localhost:19094", "localhost:19096"}
+	topics := []string{"registrations", "get_authorizations", "check_authorizations"}
+
+	KafkaProducer = NewProducer(brokers, topics)
 }
