@@ -48,6 +48,14 @@ func (r *AuthorizationGetStatus) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, r)
 }
 
+func (r *AuthorizationGetData) Marshal() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+func (r *AuthorizationGetData) Unmarshal(data []byte) error {
+	return json.Unmarshal(data, r)
+}
+
 func (r *AuthorizationCheckStatus) Marshal() ([]byte, error) {
 	return json.Marshal(r)
 }

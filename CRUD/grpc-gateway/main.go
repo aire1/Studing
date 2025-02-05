@@ -29,7 +29,7 @@ func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 	return s.RegistrationServer.Register(ctx, req)
 }
 
-func (s *GateServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskIdResponse, error) {
+func (s *GateServer) Authorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskResponse, error) {
 	return s.AuthServer.Authorization(ctx, req)
 }
 

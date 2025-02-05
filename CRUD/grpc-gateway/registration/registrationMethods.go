@@ -36,10 +36,6 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 		return "", err
 	}
 
-	if err != nil {
-		return "", err
-	}
-
 	data := shared.RegistrationData{
 		Login:    req.Login,
 		Passhash: req.Passhash,

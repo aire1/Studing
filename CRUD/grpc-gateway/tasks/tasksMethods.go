@@ -27,14 +27,14 @@ func (s *TasksServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*
 
 	switch {
 	case strings.HasPrefix(req.Taskid, shared.RegistrationStatusPrefix):
-		pbResponse.Status = v.(shared.RegistrationStatus).Result
-		pbResponse.Info = v.(shared.RegistrationStatus).Info
+		pbResponse.Status = v.(*shared.RegistrationStatus).Result
+		pbResponse.Info = v.(*shared.RegistrationStatus).Info
 	case strings.HasPrefix(req.Taskid, shared.AuthorizationGetStatusPrefix):
-		pbResponse.Status = v.(shared.AuthorizationGetStatus).Result
-		pbResponse.Info = v.(shared.AuthorizationGetStatus).Info
+		pbResponse.Status = v.(*shared.AuthorizationGetStatus).Result
+		pbResponse.Info = v.(*shared.AuthorizationGetStatus).Info
 	case strings.HasPrefix(req.Taskid, shared.AuthorizationCheckStatusPrefix):
-		pbResponse.Status = v.(shared.AuthorizationCheckStatus).Result
-		pbResponse.Info = v.(shared.AuthorizationCheckStatus).Info
+		pbResponse.Status = v.(*shared.AuthorizationCheckStatus).Result
+		pbResponse.Info = v.(*shared.AuthorizationCheckStatus).Info
 	}
 
 	return &pbResponse, nil

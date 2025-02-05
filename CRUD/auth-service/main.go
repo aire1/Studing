@@ -42,7 +42,7 @@ func main() {
 	reader_auth := kafka.NewReader(kafka.ReaderConfig{
 		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
 		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
-		Topic:          "authorizations",
+		Topic:          "get_authorizations",
 		GroupID:        "Auth-service",
 		MinBytes:       10e3,
 		MaxBytes:       10e6,

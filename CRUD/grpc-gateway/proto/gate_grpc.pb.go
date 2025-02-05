@@ -17,7 +17,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GateClient interface {
-	Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskIdResponse, error)
+	Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*NoteResponce, error)
 	GetTaskStatus(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
@@ -31,8 +31,8 @@ func NewGateClient(cc grpc.ClientConnInterface) GateClient {
 	return &gateClient{cc}
 }
 
-func (c *gateClient) Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskIdResponse, error) {
-	out := new(TaskIdResponse)
+func (c *gateClient) Authorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+	out := new(TaskResponse)
 	err := c.cc.Invoke(ctx, "/gate.Gate/Authorization", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (c *gateClient) GetTaskStatus(ctx context.Context, in *TaskRequest, opts ..
 // All implementations must embed UnimplementedGateServer
 // for forward compatibility
 type GateServer interface {
-	Authorization(context.Context, *AuthRequest) (*TaskIdResponse, error)
+	Authorization(context.Context, *AuthRequest) (*TaskResponse, error)
 	Register(context.Context, *RegisterRequest) (*TaskResponse, error)
 	GetNotes(context.Context, *NoteRequest) (*NoteResponce, error)
 	GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error)
@@ -82,7 +82,7 @@ type GateServer interface {
 type UnimplementedGateServer struct {
 }
 
-func (UnimplementedGateServer) Authorization(context.Context, *AuthRequest) (*TaskIdResponse, error) {
+func (UnimplementedGateServer) Authorization(context.Context, *AuthRequest) (*TaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authorization not implemented")
 }
 func (UnimplementedGateServer) Register(context.Context, *RegisterRequest) (*TaskResponse, error) {
