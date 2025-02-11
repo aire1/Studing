@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 
@@ -28,9 +27,12 @@ func NewProducer(brokers []string, topics []string) *Producer {
 	// Создаём writer'ов для каждого топика
 	for _, topic := range topics {
 		producer.writers[topic] = &kafka.Writer{
-			Addr:     kafka.TCP(brokers...),
-			Topic:    topic,
-			Balancer: &kafka.LeastBytes{},
+			Addr:         kafka.TCP(brokers...),
+			Topic:        topic,
+			Balancer:     &kafka.LeastBytes{},
+			BatchSize:    1,
+			BatchTimeout: 0,
+			Async:        false,
 		}
 	}
 
@@ -52,7 +54,7 @@ func (p *Producer) Produce(topic string, msg kafka.Message) {
 	if err != nil {
 		log.Println("Ошибка при отправке:", err)
 	} else {
-		fmt.Println("Сообщение отправлено в топик:", topic)
+		log.Println("Сообщение отправлено в топик:", topic)
 	}
 }
 
@@ -64,7 +66,7 @@ func (p *Producer) Close() {
 	for topic, writer := range p.writers {
 		writer.Close()
 		delete(p.writers, topic)
-		fmt.Println("Закрыт продюсер для топика:", topic)
+		log.Println("Закрыт продюсер для топика:", topic)
 	}
 }
 

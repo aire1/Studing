@@ -138,20 +138,28 @@ func CheckAuthorization(ctx context.Context) (bool, error) {
 }
 
 func createTaskCheckAuth(ctx context.Context, authHeader string) (string, error) {
+	log.Println("createTaskCheckAuth -> start")
+
 	taskId := "checkAuthorization_task:" + uuid.New().String()
 
 	taskStatus := shared.AuthorizationCheckStatus{
 		Result: "pending",
 	}
 
+	log.Println("createTaskCheckAuth -> marshal")
+
 	json_b, err := json.Marshal(taskStatus)
 	if err != nil {
 		return "", err
 	}
 
+	log.Println("createTaskCheckAuth -> marshal end and redis start")
+
 	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
 		return "", err
 	}
+
+	log.Println("createTaskCheckAuth -> redis end and kafka start")
 
 	data := shared.AuthorizationCheckData{
 		JwtToken: authHeader,
@@ -163,10 +171,14 @@ func createTaskCheckAuth(ctx context.Context, authHeader string) (string, error)
 		log.Fatalf("Failed to marshal data: %v", err)
 	}
 
-	kp.KafkaProducer.Produce("check_authorizations", kafka.Message{
-		Key:   []byte(taskId),
-		Value: jsonData,
-	})
+	go func() {
+		kp.KafkaProducer.Produce("check_authorizations", kafka.Message{
+			Key:   []byte(taskId),
+			Value: jsonData,
+		})
+	}()
+
+	log.Println("createTaskCheckAuth -> end")
 
 	return taskId, nil
 }

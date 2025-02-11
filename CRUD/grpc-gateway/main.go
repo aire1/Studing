@@ -46,6 +46,8 @@ func (s *GateServer) GetAuthorization(ctx context.Context, req *pb.AuthRequest) 
 }
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
 	rd.Init()
 	defer rd.Client.Close()
 

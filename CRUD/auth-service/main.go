@@ -27,6 +27,8 @@ func main() {
 	pg.CreatePool()
 	defer pg.Pool.Close()
 
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
 	reader_reg := kafka.NewReader(kafka.ReaderConfig{
 		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
 		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
@@ -161,6 +163,8 @@ func main() {
 				log.Fatal(err)
 			}
 
+			log.Printf("Получил сообщение")
+
 			err = json.Unmarshal(message.Value, &data)
 			if err != nil {
 				log.Printf("failed to unmarshal message: %v", err)
@@ -168,6 +172,8 @@ func main() {
 			}
 
 			go func(data shared.AuthorizationCheckData) {
+				log.Printf("Начал выполнять задание")
+
 				status := shared.AuthorizationCheckStatus{
 					Result: "success",
 					Info:   "",
@@ -179,11 +185,15 @@ func main() {
 					status.Info = err.Error()
 				}
 
+				log.Printf("Задание выполнено")
+
 				if json_data, err := json.Marshal(status); err == nil {
 					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
 				} else {
 					log.Printf("failed to marshal status info")
 				}
+
+				log.Printf("Ответ в Redis отправлен")
 			}(data)
 
 			fmt.Printf("Получено сообщение: %v\n", data)
