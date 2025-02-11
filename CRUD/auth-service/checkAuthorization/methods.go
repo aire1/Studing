@@ -37,7 +37,7 @@ func CheckAuthorization(ctx context.Context, data shared.AuthorizationCheckData)
 
 	go func() {
 		defer wg.Done()
-		redisValid, redisErr = ValidateJWTFromRedis(data.Username, data.JwtToken, ctx)
+		redisValid, redisErr = ValidateJWTFromRedis(data.Login, data.JwtToken, ctx)
 	}()
 
 	wg.Wait()

@@ -41,9 +41,11 @@ func createTaskGetAuth(ctx context.Context, req *pb.AuthRequest) (string, error)
 	}
 
 	data := shared.AuthorizationGetData{
-		Login:    req.Login,
+		BaseTaskData: shared.BaseTaskData{
+			Login:  req.Login,
+			TaskId: taskId,
+		},
 		Passhash: req.Passhash,
-		Taskid:   taskId,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -163,7 +165,9 @@ func createTaskCheckAuth(ctx context.Context, authHeader string) (string, error)
 
 	data := shared.AuthorizationCheckData{
 		JwtToken: authHeader,
-		Taskid:   taskId,
+		BaseTaskData: shared.BaseTaskData{
+			TaskId: taskId,
+		},
 	}
 
 	jsonData, err := json.Marshal(data)

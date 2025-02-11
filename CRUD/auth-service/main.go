@@ -97,7 +97,7 @@ func main() {
 				}
 
 				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
+					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
 				} else {
 					log.Printf("failed to marshal status info")
 				}
@@ -140,7 +140,7 @@ func main() {
 				}
 
 				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
+					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
 				} else {
 					log.Printf("failed to marshal status info")
 				}
@@ -188,7 +188,7 @@ func main() {
 				log.Printf("Задание выполнено")
 
 				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.Taskid, json_data, time.Hour)
+					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
 				} else {
 					log.Printf("failed to marshal status info")
 				}

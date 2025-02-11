@@ -2,7 +2,6 @@ package shared
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"strings"
 
@@ -22,46 +21,6 @@ const (
 type RedisSerializable interface {
 	Marshal() ([]byte, error)
 	Unmarshal([]byte) error
-}
-
-func (r *RegistrationData) Marshal() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-func (r *RegistrationData) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, r)
-}
-
-func (r *RegistrationStatus) Marshal() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-func (r *RegistrationStatus) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, r)
-}
-
-func (r *AuthorizationGetStatus) Marshal() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-func (r *AuthorizationGetStatus) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, r)
-}
-
-func (r *AuthorizationGetData) Marshal() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-func (r *AuthorizationGetData) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, r)
-}
-
-func (r *AuthorizationCheckStatus) Marshal() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-func (r *AuthorizationCheckStatus) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, r)
 }
 
 func GetTaskFromRedis(client *redis.Client, ctx context.Context, key string) (any, error) {

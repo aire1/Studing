@@ -37,9 +37,11 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 	}
 
 	data := shared.RegistrationData{
-		Login:    req.Login,
+		BaseTaskData: shared.BaseTaskData{
+			Login:  req.Login,
+			TaskId: taskId,
+		},
 		Passhash: req.Passhash,
-		Taskid:   taskId,
 	}
 
 	jsonData, err := json.Marshal(data)

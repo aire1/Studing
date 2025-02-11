@@ -25,14 +25,12 @@ type GateServer struct {
 }
 
 func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
-	log.Println("start")
 	res, err := auth.CheckAuthorization(ctx)
 	if err != nil {
 		return nil, err
 	} else if !res {
 		return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
 	}
-	log.Println("stop")
 
 	return s.TasksServer.GetTaskStatus(ctx, req)
 }
