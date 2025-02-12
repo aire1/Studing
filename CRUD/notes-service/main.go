@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	pg "crud/common-libs/postgres"
 	rd "crud/common-libs/redis"
+	"crud/common-libs/shared"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -29,8 +32,33 @@ func main() {
 	})
 	defer reader_create.Close()
 
-	// go func(reader *kafka.Reader) {
-	// 	var data shared.
-	// }
+	go func(reader *kafka.Reader) {
+		var data shared.CreateTaskData
+		for {
+			message, err := reader.FetchMessage(context.Background())
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = json.Unmarshal(message.Value, &data)
+			if err != nil {
+				log.Printf("failed to unmarshal message: %v", err)
+				continue
+			}
+
+			go func(data shared.CreateTaskData) {
+				status := shared.CreateTaskStatus{
+					BaseTaskStatus: shared.BaseTaskStatus{
+						Result: "success",
+						Info:   "",
+					},
+				}
+
+				//todo: реализовать функцию добавления заметки в БД
+
+				
+			}(data)
+		}
+	}
 
 }

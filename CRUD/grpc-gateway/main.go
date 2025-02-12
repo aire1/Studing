@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -12,7 +13,7 @@ import (
 	rd "crud/common-libs/redis"
 	auth "crud/grpc-gateway/authorization"
 	kafka "crud/grpc-gateway/kafka"
-	pb "crud/grpc-gateway/proto"
+	pb "crud/grpc-gateway/proto/gate"
 	reg "crud/grpc-gateway/registration"
 	tasks "crud/grpc-gateway/tasks"
 )
@@ -25,11 +26,13 @@ type GateServer struct {
 }
 
 func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
-	res, err := auth.CheckAuthorization(ctx)
-	if err != nil {
-		return nil, err
-	} else if !res {
-		return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
+	if !strings.HasPrefix(req.Taskid, "getAuthorization_task") {
+		res, err := auth.CheckAuthorization(ctx)
+		if err != nil {
+			return nil, err
+		} else if !res {
+			return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
+		}
 	}
 
 	return s.TasksServer.GetTaskStatus(ctx, req)
@@ -51,6 +54,10 @@ func main() {
 
 	kafka.Init()
 	defer kafka.KafkaProducer.Close()
+
+	if err := auth.InitAuthGateClient(); err != nil {
+		log.Fatalf("Ошибка запуска grpc-client: %v", err)
+	}
 
 	lis, err := net.Listen("tcp", ":50050")
 	if err != nil {

@@ -3,9 +3,9 @@ package authorization
 import (
 	"context"
 	kp "crud/grpc-gateway/kafka"
-	pb "crud/grpc-gateway/proto"
+	pb_auth_gate "crud/grpc-gateway/proto/auth_gate"
+	pb_main_gate "crud/grpc-gateway/proto/gate"
 	"encoding/json"
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -14,6 +14,7 @@ import (
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
@@ -22,13 +23,30 @@ import (
 	shared "crud/common-libs/shared"
 )
 
+var (
+	AuthClient pb_auth_gate.AuthGateClient
+)
+
 type AuthServer struct{}
 
-func createTaskGetAuth(ctx context.Context, req *pb.AuthRequest) (string, error) {
+func InitAuthGateClient() error {
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+
+	AuthClient = pb_auth_gate.NewAuthGateClient(conn)
+
+	return nil
+}
+
+func createTaskGetAuth(ctx context.Context, req *pb_main_gate.AuthRequest) (string, error) {
 	taskId := "getAuthorization_task:" + uuid.New().String()
 
 	taskStatus := shared.AuthorizationCheckStatus{
-		Result: "pending",
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "pending",
+		},
 	}
 
 	json_b, err := json.Marshal(taskStatus)
@@ -61,7 +79,7 @@ func createTaskGetAuth(ctx context.Context, req *pb.AuthRequest) (string, error)
 	return taskId, nil
 }
 
-func (s *AuthServer) GetAuthorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskResponse, error) {
+func (s *AuthServer) GetAuthorization(ctx context.Context, req *pb_main_gate.AuthRequest) (*pb_main_gate.TaskResponse, error) {
 	log.Println("New auth request!")
 
 	taskId, err := createTaskGetAuth(ctx, req)
@@ -69,32 +87,10 @@ func (s *AuthServer) GetAuthorization(ctx context.Context, req *pb.AuthRequest) 
 		return nil, status.Errorf(codes.Internal, "Internal server error: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	pbRes, err := shared.WaitForCompleteTask(rd.Client, taskId, ctx)
-	if err != nil {
-		if strings.Contains(err.Error(), "context deadline exceeded") {
-			return &pb.TaskResponse{
-				Status: "timeout",
-				Info:   taskId,
-			}, nil
-		}
-		return nil, err
-	}
-
-	if pbRes.Status == "success" {
-		authResId := fmt.Sprintf("session:%s", req.Login)
-		jwtToken, err := rd.Client.Get(ctx, authResId).Result()
-		if err != nil {
-			return pbRes, nil
-		}
-
-		md := metadata.Pairs("authorization", jwtToken)
-		grpc.SetHeader(ctx, md)
-	}
-
-	return pbRes, nil
+	return &pb_main_gate.TaskResponse{
+		Status: "created",
+		Info:   taskId,
+	}, nil
 }
 
 func CheckAuthorization(ctx context.Context) (bool, error) {
@@ -109,80 +105,18 @@ func CheckAuthorization(ctx context.Context) (bool, error) {
 		return false, status.Errorf(codes.Unauthenticated, "missing authorization token")
 	}
 
-	log.Println("CheckAuthorization -> metadata stop")
-
-	log.Println("CheckAuthorization -> create task start")
-
-	taskId, err := createTaskCheckAuth(ctx, strings.Join(authHeader, ""))
-	if err != nil {
-		return false, status.Errorf(codes.Internal, "Internal server error: %v", err)
-	}
-
-	log.Println("CheckAuthorization -> create task stop")
-
-	log.Println("CheckAuthorization -> waiting for task start")
-
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	pbRes, err := shared.WaitForCompleteTask(rd.Client, taskId, ctx)
+	res, err := AuthClient.CheckAuthorization(
+		ctx,
+		&pb_auth_gate.AuthCheckRequest{
+			JwtToken: strings.Join(authHeader, ""),
+		},
+	)
 	if err != nil {
 		return false, err
 	}
 
-	if pbRes.Status != "success" {
-		return false, status.Errorf(codes.Unauthenticated, "%s", pbRes.Info)
-	}
-
-	log.Println("CheckAuthorization -> waiting for task stop")
-
-	return true, nil
-}
-
-func createTaskCheckAuth(ctx context.Context, authHeader string) (string, error) {
-	log.Println("createTaskCheckAuth -> start")
-
-	taskId := "checkAuthorization_task:" + uuid.New().String()
-
-	taskStatus := shared.AuthorizationCheckStatus{
-		Result: "pending",
-	}
-
-	log.Println("createTaskCheckAuth -> marshal")
-
-	json_b, err := json.Marshal(taskStatus)
-	if err != nil {
-		return "", err
-	}
-
-	log.Println("createTaskCheckAuth -> marshal end and redis start")
-
-	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
-		return "", err
-	}
-
-	log.Println("createTaskCheckAuth -> redis end and kafka start")
-
-	data := shared.AuthorizationCheckData{
-		JwtToken: authHeader,
-		BaseTaskData: shared.BaseTaskData{
-			TaskId: taskId,
-		},
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Fatalf("Failed to marshal data: %v", err)
-	}
-
-	go func() {
-		kp.KafkaProducer.Produce("check_authorizations", kafka.Message{
-			Key:   []byte(taskId),
-			Value: jsonData,
-		})
-	}()
-
-	log.Println("createTaskCheckAuth -> end")
-
-	return taskId, nil
+	return res.Status, nil
 }

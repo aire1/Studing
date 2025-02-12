@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package auth_service;
+option go_package = "/proto;auth_service";
+
+service AuthGate {
+    rpc CheckAuthorization(AuthCheckRequest) returns (AuthCheckResponse);
+}
+
+message AuthCheckRequest {
+    string login = 1;
+    string jwtToken = 2;
+}
+
+message AuthCheckResponse {
+    bool status = 1;
+}
+

@@ -3,10 +3,9 @@ package registration
 import (
 	"context"
 	kp "crud/grpc-gateway/kafka"
-	pb "crud/grpc-gateway/proto"
+	pb "crud/grpc-gateway/proto/gate"
 	"encoding/json"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +23,9 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 	taskId := "registration_task:" + uuid.New().String()
 
 	taskStatus := shared.AuthorizationCheckStatus{
-		Result: "pending",
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "pending",
+		},
 	}
 
 	json_b, err := json.Marshal(taskStatus)
@@ -49,10 +50,12 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 		log.Fatalf("Failed to marshal data: %v", err)
 	}
 
-	kp.KafkaProducer.Produce("registrations", kafka.Message{
-		Key:   []byte(req.Login),
-		Value: jsonData,
-	})
+	go func() {
+		kp.KafkaProducer.Produce("registrations", kafka.Message{
+			Key:   []byte(req.Login),
+			Value: jsonData,
+		})
+	}()
 
 	return taskId, nil
 }
@@ -65,18 +68,8 @@ func (s *RegistrationServer) Register(ctx context.Context, req *pb.RegisterReque
 		return nil, status.Errorf(codes.Internal, "Internal server error: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	pbRes, err := shared.WaitForCompleteTask(rd.Client, taskId, ctx)
-	if err != nil {
-		if strings.Contains(err.Error(), "context deadline exceeded") {
-			return &pb.TaskResponse{
-				Status: "timeout",
-				Info:   taskId,
-			}, nil
-		}
-		return nil, err
-	}
-	return pbRes, nil
+	return &pb.TaskResponse{
+		Status: "created",
+		Info:   taskId,
+	}, nil
 }

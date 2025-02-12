@@ -2,13 +2,12 @@ package check_authorization
 
 import (
 	"context"
+	pb "crud/auth-service/proto"
 	rd "crud/common-libs/redis"
-	"sync"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 
-	shared "crud/common-libs/shared"
 	jwt "crud/common-libs/shared/jwt"
 )
 
@@ -22,25 +21,14 @@ func ValidateJWTFromRedis(userID, token string, ctx context.Context) (bool, erro
 	return storedToken == token, nil
 }
 
-func CheckAuthorization(ctx context.Context, data shared.AuthorizationCheckData) error {
-	var wg sync.WaitGroup
+func CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) error {
 	var jwtErr, redisErr error
 	var res *jwt.Claims
 	var redisValid bool
 
-	wg.Add(2)
+	res, jwtErr = jwt.ValidateToken(req.JwtToken)
 
-	go func() {
-		defer wg.Done()
-		res, jwtErr = jwt.ValidateToken(data.JwtToken)
-	}()
-
-	go func() {
-		defer wg.Done()
-		redisValid, redisErr = ValidateJWTFromRedis(data.Login, data.JwtToken, ctx)
-	}()
-
-	wg.Wait()
+	redisValid, redisErr = ValidateJWTFromRedis(res.Username, req.JwtToken, ctx)
 
 	if jwtErr != nil {
 		return errors.Errorf("error validating token")

@@ -2,7 +2,7 @@ package tasks
 
 import (
 	"context"
-	pb "crud/grpc-gateway/proto"
+	pb "crud/grpc-gateway/proto/gate"
 	"log"
 	"strings"
 

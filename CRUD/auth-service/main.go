@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
+	pb "crud/auth-service/proto"
 	pg "crud/common-libs/postgres"
+
 	//rd "crud/auth-service/common-libs/redis"
 
 	rd "crud/common-libs/redis"
@@ -19,7 +22,27 @@ import (
 	shared "crud/common-libs/shared"
 
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+type authserver struct {
+	pb.UnimplementedAuthGateServer
+}
+
+func (s *authserver) CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) (*pb.AuthCheckResponse, error) {
+	err := authCheck.CheckAuthorization(ctx, req)
+	if err != nil {
+		return &pb.AuthCheckResponse{
+			Status: false,
+		}, status.Errorf(codes.Unauthenticated, "%s", err.Error())
+	}
+
+	return &pb.AuthCheckResponse{
+		Status: true,
+	}, nil
+}
 
 func main() {
 	rd.Init()
@@ -53,18 +76,6 @@ func main() {
 	})
 	defer reader_auth.Close()
 
-	reader_auth_checks := kafka.NewReader(kafka.ReaderConfig{
-		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
-		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
-		Topic:          "check_authorizations",
-		GroupID:        "Auth-service",
-		MinBytes:       10e3,
-		MaxBytes:       10e6,
-		MaxWait:        500 * time.Millisecond,
-		CommitInterval: time.Second,
-	})
-	defer reader_auth_checks.Close()
-
 	log.Println("Подключился к Kafka")
 
 	go func(reader *kafka.Reader) {
@@ -83,8 +94,10 @@ func main() {
 
 			go func(data shared.RegistrationData) {
 				status := shared.RegistrationStatus{
-					Result: "success",
-					Info:   "",
+					BaseTaskStatus: shared.BaseTaskStatus{
+						Result: "success",
+						Info:   "",
+					},
 				}
 
 				err = reg.Register(context.Background(), data)
@@ -128,15 +141,19 @@ func main() {
 
 			go func(data shared.AuthorizationGetData) {
 				status := shared.AuthorizationGetStatus{
-					Result: "success",
-					Info:   "",
+					BaseTaskStatus: shared.BaseTaskStatus{
+						Result: "success",
+						Info:   "",
+					},
 				}
 
-				if err = authGet.Authorize(context.Background(), data); err != nil {
+				if token, err := authGet.Authorize(context.Background(), data); err != nil {
 					log.Printf("failed to auth user: %v", err)
 
 					status.Result = "fail"
 					status.Info = err.Error()
+				} else {
+					status.Info = token
 				}
 
 				if json_data, err := json.Marshal(status); err == nil {
@@ -155,55 +172,21 @@ func main() {
 		}
 	}(reader_auth)
 
-	go func(reader *kafka.Reader) {
-		var data shared.AuthorizationCheckData
-		for {
-			message, err := reader.FetchMessage(context.Background())
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			log.Printf("Получил сообщение")
-
-			err = json.Unmarshal(message.Value, &data)
-			if err != nil {
-				log.Printf("failed to unmarshal message: %v", err)
-				continue
-			}
-
-			go func(data shared.AuthorizationCheckData) {
-				log.Printf("Начал выполнять задание")
-
-				status := shared.AuthorizationCheckStatus{
-					Result: "success",
-					Info:   "",
-				}
-
-				if err := authCheck.CheckAuthorization(context.Background(), data); err != nil {
-					log.Printf("denied to auth user: %v", err)
-					status.Result = "fail"
-					status.Info = err.Error()
-				}
-
-				log.Printf("Задание выполнено")
-
-				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
-				} else {
-					log.Printf("failed to marshal status info")
-				}
-
-				log.Printf("Ответ в Redis отправлен")
-			}(data)
-
-			fmt.Printf("Получено сообщение: %v\n", data)
-
-			err = reader.CommitMessages(context.Background(), message)
-			if err != nil {
-				log.Printf("failed to commit message: %v", err)
-			}
+	//Создаем сервер gRPC auth-gate
+	go func() {
+		lis, err := net.Listen("tcp", ":50051")
+		if err != nil {
+			log.Fatalf("Ошибка запуска auth-gate: %v", err)
 		}
-	}(reader_auth_checks)
+		s := grpc.NewServer()
+
+		log.Printf("Поднял gRPC сервер на 50051")
+
+		pb.RegisterAuthGateServer(s, &authserver{})
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("Ошибка запуска auth-gate: %v", err)
+		}
+	}()
 
 	select {}
 }
