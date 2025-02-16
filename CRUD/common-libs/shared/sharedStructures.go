@@ -6,6 +6,14 @@ package shared
 //куча дублей сделана лишь для возможного расширения в будущем
 //(разумеется, его не будет, но я пытаюсь в идеальную архитектуру)
 
+type Note struct {
+	Id           int    `json:"id"`
+	UserId       string `json:"UserId"`
+	Title        string `json:"title"`
+	Content      string `json:"content"`
+	CreationDate string `json:"creationDate"`
+}
+
 // Базовая структура для Kafka, поля которой, так или иначе, содержат все сообщения
 type BaseTaskData struct {
 	Login  string `json:"login"`
