@@ -21,7 +21,7 @@ func ValidateJWTFromRedis(userID, token string, ctx context.Context) (bool, erro
 	return storedToken == token, nil
 }
 
-func CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) error {
+func CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) (string, error) {
 	var jwtErr, redisErr error
 	var res *jwt.Claims
 	var redisValid bool
@@ -31,20 +31,20 @@ func CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) error {
 	redisValid, redisErr = ValidateJWTFromRedis(res.Username, req.JwtToken, ctx)
 
 	if jwtErr != nil {
-		return errors.Errorf("error validating token")
+		return "", errors.Errorf("error validating token")
 	}
 	if res == nil {
-		return errors.Errorf("jwt not valid")
+		return "", errors.Errorf("jwt not valid")
 	}
 	if redisErr == redis.Nil {
-		return errors.Errorf("can't find jwt session: %v", redisErr)
+		return "", errors.Errorf("can't find jwt session: %v", redisErr)
 	}
 	if redisErr != nil {
-		return errors.Errorf("error validating token from redis: %v", redisErr)
+		return "", errors.Errorf("error validating token from redis: %v", redisErr)
 	}
 	if !redisValid {
-		return errors.Errorf("client token != stored token")
+		return "", errors.Errorf("client token != stored token")
 	}
 
-	return nil
+	return res.Username, nil
 }

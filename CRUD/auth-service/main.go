@@ -32,7 +32,7 @@ type authserver struct {
 }
 
 func (s *authserver) CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) (*pb.AuthCheckResponse, error) {
-	err := authCheck.CheckAuthorization(ctx, req)
+	username, err := authCheck.CheckAuthorization(ctx, req)
 	if err != nil {
 		return &pb.AuthCheckResponse{
 			Status: false,
@@ -40,7 +40,8 @@ func (s *authserver) CheckAuthorization(ctx context.Context, req *pb.AuthCheckRe
 	}
 
 	return &pb.AuthCheckResponse{
-		Status: true,
+		Status:   true,
+		Username: username,
 	}, nil
 }
 

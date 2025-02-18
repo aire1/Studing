@@ -19,8 +19,9 @@ const _ = grpc.SupportPackageIsVersion7
 type GateClient interface {
 	GetAuthorization(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*TaskResponse, error)
-	GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*NoteResponce, error)
+	GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	GetTaskStatus(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
+	CreateNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error)
 }
 
 type gateClient struct {
@@ -49,8 +50,8 @@ func (c *gateClient) Register(ctx context.Context, in *RegisterRequest, opts ...
 	return out, nil
 }
 
-func (c *gateClient) GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*NoteResponce, error) {
-	out := new(NoteResponce)
+func (c *gateClient) GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*TaskResponse, error) {
+	out := new(TaskResponse)
 	err := c.cc.Invoke(ctx, "/gate.Gate/GetNotes", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -67,14 +68,24 @@ func (c *gateClient) GetTaskStatus(ctx context.Context, in *TaskRequest, opts ..
 	return out, nil
 }
 
+func (c *gateClient) CreateNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error) {
+	out := new(TaskResponse)
+	err := c.cc.Invoke(ctx, "/gate.Gate/CreateNote", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GateServer is the server API for Gate service.
 // All implementations must embed UnimplementedGateServer
 // for forward compatibility
 type GateServer interface {
 	GetAuthorization(context.Context, *AuthRequest) (*TaskResponse, error)
 	Register(context.Context, *RegisterRequest) (*TaskResponse, error)
-	GetNotes(context.Context, *NoteRequest) (*NoteResponce, error)
+	GetNotes(context.Context, *NoteRequest) (*TaskResponse, error)
 	GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error)
+	CreateNote(context.Context, *Note) (*TaskResponse, error)
 	mustEmbedUnimplementedGateServer()
 }
 
@@ -88,11 +99,14 @@ func (UnimplementedGateServer) GetAuthorization(context.Context, *AuthRequest) (
 func (UnimplementedGateServer) Register(context.Context, *RegisterRequest) (*TaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedGateServer) GetNotes(context.Context, *NoteRequest) (*NoteResponce, error) {
+func (UnimplementedGateServer) GetNotes(context.Context, *NoteRequest) (*TaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotes not implemented")
 }
 func (UnimplementedGateServer) GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTaskStatus not implemented")
+}
+func (UnimplementedGateServer) CreateNote(context.Context, *Note) (*TaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
 }
 func (UnimplementedGateServer) mustEmbedUnimplementedGateServer() {}
 
@@ -179,6 +193,24 @@ func _Gate_GetTaskStatus_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gate_CreateNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Note)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GateServer).CreateNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gate.Gate/CreateNote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GateServer).CreateNote(ctx, req.(*Note))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Gate_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gate.Gate",
 	HandlerType: (*GateServer)(nil),
@@ -198,6 +230,10 @@ var _Gate_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTaskStatus",
 			Handler:    _Gate_GetTaskStatus_Handler,
+		},
+		{
+			MethodName: "CreateNote",
+			Handler:    _Gate_CreateNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

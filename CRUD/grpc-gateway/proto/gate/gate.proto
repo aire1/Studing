@@ -6,8 +6,9 @@ option go_package = "/proto/gate;gate";
 service Gate {
     rpc GetAuthorization(AuthRequest) returns (TaskResponse);
     rpc Register(RegisterRequest) returns (TaskResponse);
-    rpc GetNotes(NoteRequest) returns (NoteResponce);
+    rpc GetNotes(NoteRequest) returns (TaskResponse);
     rpc GetTaskStatus(TaskRequest) returns (TaskResponse);
+    rpc CreateNote(Note) returns (TaskResponse);
 }
 
 message AuthRequest {
@@ -20,14 +21,6 @@ message RegisterRequest {
     string passhash = 2;
 }
 
-message TaskIdResponse {
-    string message =1;
-}
-
-message NoteRequest {
-    //Пустое сообщение, так как все данные уже есть в JWT
-}
-
 message TaskRequest {
     string taskid = 1;
 }
@@ -35,10 +28,19 @@ message TaskRequest {
 message TaskResponse {
     string status = 1;
     string info = 2;
+    oneof data {
+        NoteResponce noteResponse = 3;
+    }
+}
+
+message NoteRequest {
+    uint64 offset = 1;
+    uint64 count = 2;
+    uint64 id = 3;
 }
 
 message NoteResponce {
-    repeated Note noted = 1;
+    repeated Note note = 1;
 }
 
 message Note {

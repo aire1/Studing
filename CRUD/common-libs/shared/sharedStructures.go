@@ -53,11 +53,11 @@ type AuthorizationCheckStatus struct {
 	BaseTaskStatus
 }
 
-type CreateTaskData struct {
+type CreateNoteData struct {
 	BaseTaskData
-	Info string `json:"info"`
+	Note
 }
 
-type CreateTaskStatus struct {
+type CreateNoteStatus struct {
 	BaseTaskStatus
 }

@@ -5,6 +5,7 @@ import (
 	pg "crud/common-libs/postgres"
 	rd "crud/common-libs/redis"
 	"crud/common-libs/shared"
+	methods "crud/notes-service/methods"
 	"encoding/json"
 	"log"
 	"time"
@@ -33,7 +34,7 @@ func main() {
 	defer reader_create.Close()
 
 	go func(reader *kafka.Reader) {
-		var data shared.CreateTaskData
+		var data shared.CreateNoteData
 		for {
 			message, err := reader.FetchMessage(context.Background())
 			if err != nil {
@@ -46,16 +47,30 @@ func main() {
 				continue
 			}
 
-			go func(data shared.CreateTaskData) {
-				status := shared.CreateTaskStatus{
+			go func(data shared.CreateNoteData) {
+				status := shared.CreateNoteStatus{
 					BaseTaskStatus: shared.BaseTaskStatus{
 						Result: "success",
 						Info:   "",
 					},
 				}
 
-				//todo: реализовать функцию добавления заметки в БД
+				note := data.Note
 
+				id, err := methods.Create(context.Background(), note)
+				if err != nil {
+					status.Result = "error"
+					status.Info = err.Error()
+				}
+
+				status.Result = "success"
+				status.Info = id
+
+				if json_data, err := json.Marshal(status); err == nil {
+					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
+				} else {
+					log.Printf("failed to marshal status info")
+				}
 			}(data)
 		}
 	}(reader_create)

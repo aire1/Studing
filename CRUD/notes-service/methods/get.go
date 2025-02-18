@@ -27,7 +27,12 @@ func get(ctx context.Context, userId, offset, count int) (*[]shared.Note, error)
 			sq.Eq{"user_id": userId},
 			sq.NotEq{"deleted": true}).
 		Offset(uint64(offset)).
-		Limit(uint64(count)).ToSql()
+		Limit(uint64(count)).
+		ToSql()
+
+	if err != nil {
+		return nil, err
+	}
 
 	res, err := conn.Query(ctx, query, args...)
 	if err != nil {

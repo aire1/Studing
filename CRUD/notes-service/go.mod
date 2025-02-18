@@ -1,4 +1,4 @@
-module crud/notes
+module crud/notes-service
 
 go 1.22.2
 
