@@ -25,17 +25,36 @@ type GateServer struct {
 	tasks.TasksServer
 }
 
+func checkAuth(ctx context.Context) (*string, error) {
+	var (
+		err      error
+		username string
+	)
+
+	username, err = auth.CheckAuthorization(ctx)
+	if err != nil {
+		return nil, err
+	} else if username == "" {
+		return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
+	}
+
+	return &username, nil
+}
+
 func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
+	var (
+		err      error
+		username *string
+	)
+
 	if !strings.HasPrefix(req.Taskid, "getAuthorization_task") {
-		res, err := auth.CheckAuthorization(ctx)
+		username, err = checkAuth(ctx)
 		if err != nil {
 			return nil, err
-		} else if !res {
-			return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
 		}
 	}
 
-	return s.TasksServer.GetTaskStatus(ctx, req)
+	return s.TasksServer.GetTaskStatus(ctx, req, username)
 }
 
 func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskResponse, error) {

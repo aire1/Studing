@@ -15,7 +15,7 @@ import (
 
 type TasksServer struct{}
 
-func (s *TasksServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
+func (s *TasksServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest, username *string) (*pb.TaskResponse, error) {
 	log.Println("New task status request!")
 
 	v, err := shared.GetTaskFromRedis(rd.Client, ctx, req.Taskid)

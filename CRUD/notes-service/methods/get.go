@@ -8,7 +8,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-func get(ctx context.Context, userId, offset, count int) (*[]shared.Note, error) {
+func get(ctx context.Context, username, offset, count int) (*[]shared.Note, error) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -24,7 +24,7 @@ func get(ctx context.Context, userId, offset, count int) (*[]shared.Note, error)
 	query, args, err := sq.Select("id, name, text, created_at").
 		From("public.notes").
 		Where(
-			sq.Eq{"user_id": userId},
+			sq.Eq{"username": username},
 			sq.NotEq{"deleted": true}).
 		Offset(uint64(offset)).
 		Limit(uint64(count)).
