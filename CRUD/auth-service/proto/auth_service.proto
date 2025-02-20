@@ -14,5 +14,6 @@ message AuthCheckRequest {
 message AuthCheckResponse {
     bool status = 1;
     string username = 2;
+    string uid = 3;
 }
 

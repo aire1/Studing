@@ -21,7 +21,11 @@ func Authorize(ctx context.Context, data shared.AuthorizationGetData) (string, e
 		return "", errors.Errorf("invalid credentials")
 	}
 
-	token, err := jwt.GenerateToken(data.Login, time.Hour*24)
+	uid, err := GetUserId(data.Login)
+	if err != nil {
+		return "", errors.Errorf("can't get user id: %v", err)
+	}
+	token, err := jwt.GenerateToken(data.Login, uid, time.Hour*24)
 	if err != nil {
 		return "", errors.Errorf("can't generate jwt: %v", err)
 	}

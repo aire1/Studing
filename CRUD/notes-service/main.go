@@ -33,6 +33,8 @@ func main() {
 	})
 	defer reader_create.Close()
 
+	log.Println("Подключился к Kafka")
+
 	go func(reader *kafka.Reader) {
 		var data shared.CreateNoteData
 		for {
@@ -55,24 +57,28 @@ func main() {
 					},
 				}
 
-				note := data.Note
-
-				id, err := methods.Create(context.Background(), note)
+				id, err := methods.Create(context.Background(), data)
 				if err != nil {
 					status.Result = "error"
 					status.Info = err.Error()
+				} else {
+					status.Result = "success"
+					status.Info = id
 				}
 
-				status.Result = "success"
-				status.Info = id
-
-				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
-				} else {
-					log.Printf("failed to marshal status info")
+				err = rd.PushStatusIntoRedis(context.Background(), data.TaskId, status, time.Hour)
+				if err != nil {
+					log.Printf("failed to push status into redis: %v", err)
 				}
 			}(data)
+
+			log.Printf("Получено сообщение: %v", data)
+			err = reader.CommitMessages(context.Background(), message)
+			if err != nil {
+				log.Printf("failed to commit message: %v", err)
+			}
 		}
 	}(reader_create)
 
+	select {}
 }

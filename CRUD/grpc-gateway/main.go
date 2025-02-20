@@ -4,18 +4,16 @@ import (
 	"context"
 	"log"
 	"net"
-	"strings"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	rd "crud/common-libs/redis"
-	auth "crud/grpc-gateway/authorization"
-	kafka "crud/grpc-gateway/kafka"
+	kafka "crud/grpc-gateway/kafka_producer"
 	pb "crud/grpc-gateway/proto/gate"
-	reg "crud/grpc-gateway/registration"
-	tasks "crud/grpc-gateway/tasks"
+	auth "crud/grpc-gateway/services_logic/authorization"
+	notes "crud/grpc-gateway/services_logic/notes"
+	reg "crud/grpc-gateway/services_logic/registration"
+	tasks "crud/grpc-gateway/services_logic/tasks"
 )
 
 type GateServer struct {
@@ -23,38 +21,23 @@ type GateServer struct {
 	reg.RegistrationServer
 	auth.AuthServer
 	tasks.TasksServer
-}
-
-func checkAuth(ctx context.Context) (*string, error) {
-	var (
-		err      error
-		username string
-	)
-
-	username, err = auth.CheckAuthorization(ctx)
-	if err != nil {
-		return nil, err
-	} else if username == "" {
-		return nil, status.Errorf(codes.Unauthenticated, "wrong jwt token")
-	}
-
-	return &username, nil
+	notes.NotesServer
 }
 
 func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
-	var (
-		err      error
-		username *string
-	)
+	// var (
+	// 	err      error
+	// 	username string
+	// )
 
-	if !strings.HasPrefix(req.Taskid, "getAuthorization_task") {
-		username, err = checkAuth(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
+	// if !strings.HasPrefix(req.Taskid, "getAuthorization_task") {
+	// 	username, err = checkAuth(ctx)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
-	return s.TasksServer.GetTaskStatus(ctx, req, username)
+	return s.TasksServer.GetTaskStatus(ctx, req, "anonymous")
 }
 
 func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskResponse, error) {
@@ -63,6 +46,15 @@ func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 
 func (s *GateServer) GetAuthorization(ctx context.Context, req *pb.AuthRequest) (*pb.TaskResponse, error) {
 	return s.AuthServer.GetAuthorization(ctx, req)
+}
+
+func (s *GateServer) CreateNote(ctx context.Context, req *pb.Note) (*pb.TaskResponse, error) {
+	err := auth.CheckAuthorization(&ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.NotesServer.CreateNote(ctx, req)
 }
 
 func main() {

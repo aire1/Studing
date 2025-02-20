@@ -2,9 +2,10 @@ package registration
 
 import (
 	"context"
-	kp "crud/grpc-gateway/kafka"
+	kp "crud/grpc-gateway/kafka_producer"
 	pb "crud/grpc-gateway/proto/gate"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -19,8 +20,21 @@ import (
 
 type RegistrationServer struct{}
 
-func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
-	taskId := "registration_task:" + uuid.New().String()
+func setTaskStatus(ctx context.Context, taskId string, taskStatus interface{}) error {
+	json_b, err := json.Marshal(taskStatus)
+	if err != nil {
+		return err
+	}
+
+	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createTask(ctx context.Context, req *pb.RegisterRequest, username string) (string, error) {
+	taskId := fmt.Sprintf("%s:registration_task:%s", username, uuid.New().String())
 
 	taskStatus := shared.AuthorizationCheckStatus{
 		BaseTaskStatus: shared.BaseTaskStatus{
@@ -28,12 +42,7 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 		},
 	}
 
-	json_b, err := json.Marshal(taskStatus)
-	if err != nil {
-		return "", err
-	}
-
-	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
+	if err := setTaskStatus(ctx, taskId, taskStatus); err != nil {
 		return "", err
 	}
 
@@ -63,7 +72,7 @@ func createTask(ctx context.Context, req *pb.RegisterRequest) (string, error) {
 func (s *RegistrationServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskResponse, error) {
 	log.Println("New register request!")
 
-	taskId, err := createTask(ctx, req)
+	taskId, err := createTask(ctx, req, "anonymous")
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Internal server error: %v", err)
 	}

@@ -12,6 +12,7 @@ var jwtKey = []byte("studing") //знаю, нужно переность в па
 
 type Claims struct {
 	Username string `json:"username"`
+	Uid      string `json:"uid"`
 	jwt.StandardClaims
 }
 
@@ -22,11 +23,12 @@ func StoreTokenInRedis(ctx context.Context, client *redis.Client, userID string,
 	return err
 }
 
-func GenerateToken(username string, expirationDate time.Duration) (string, error) {
+func GenerateToken(username string, uid string, expirationDate time.Duration) (string, error) {
 	expiration := time.Now().Add(expirationDate)
 
 	claims := &Claims{
 		Username: username,
+		Uid:      uid,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expiration.Unix(),
 		},

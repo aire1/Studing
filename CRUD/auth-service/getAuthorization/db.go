@@ -25,3 +25,22 @@ func GetUserPasshash(username string) (string, error) {
 
 	return passhash, nil
 }
+
+func GetUserId(username string) (string, error) {
+	conn, err := pg.Pool.Acquire(context.Background())
+	if err != nil {
+		return "", err
+	}
+	defer conn.Release()
+
+	var uid string
+	err = conn.QueryRow(
+		context.Background(),
+		fmt.Sprintf(`select id from public.users where username = '%s';`, username),
+	).Scan(&uid)
+	if err != nil {
+		return "", err
+	}
+
+	return uid, nil
+}

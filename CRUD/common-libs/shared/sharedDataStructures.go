@@ -1,10 +1,6 @@
 package shared
 
 //типы формата *Data - это типы для Kafka
-//типы формата *Status - это типы для передачи статуса/результата через Redis
-
-//куча дублей сделана лишь для возможного расширения в будущем
-//(разумеется, его не будет, но я пытаюсь в идеальную архитектуру)
 
 type Note struct {
 	Id           int    `json:"id"`
@@ -20,19 +16,9 @@ type BaseTaskData struct {
 	TaskId string `json:"taskid"`
 }
 
-// Базовая структура для Redis, поля которой, так или иначе, содержат все сообщения
-type BaseTaskStatus struct {
-	Result string `json:"result"`
-	Info   string `json:"info"`
-}
-
 type RegistrationData struct {
 	BaseTaskData
 	Passhash string `json:"passhash"`
-}
-
-type RegistrationStatus struct {
-	BaseTaskStatus
 }
 
 type AuthorizationGetData struct {
@@ -40,17 +26,9 @@ type AuthorizationGetData struct {
 	Passhash string `json:"passhash"`
 }
 
-type AuthorizationGetStatus struct {
-	BaseTaskStatus
-}
-
 type AuthorizationCheckData struct {
 	BaseTaskData
 	JwtToken string `json:"jwtToken"`
-}
-
-type AuthorizationCheckStatus struct {
-	BaseTaskStatus
 }
 
 type CreateNoteData struct {
@@ -58,17 +36,8 @@ type CreateNoteData struct {
 	Note
 }
 
-type CreateNoteStatus struct {
-	BaseTaskStatus
-}
-
 type GetNoteData struct {
 	BaseTaskData
 	Offset int
 	Count  int
-}
-
-type GetNoteStatus struct {
-	BaseTaskStatus
-	Notes []Note
 }

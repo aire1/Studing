@@ -3,7 +3,7 @@ package notes
 import (
 	"context"
 	"crud/common-libs/shared"
-	kp "crud/grpc-gateway/kafka"
+	kp "crud/grpc-gateway/kafka_producer"
 	pb "crud/grpc-gateway/proto/gate"
 	"encoding/json"
 	"fmt"
@@ -16,33 +16,26 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-func CreateNote(ctx context.Context, req *pb.Note, username *string) (string, error) {
-	taskId := fmt.Sprintf("%s:createNote_task:%s", username, uuid.New().String())
+func SelectNote(ctx context.Context, req *pb.NoteRequest, username *string) (string, error) {
+	taskId := fmt.Sprintf("%s:getNote_task:%s", *username, uuid.New().String())
 
-	taskStatus := shared.CreateNoteStatus{
+	taskStatus := shared.GetNoteStatus{
 		BaseTaskStatus: shared.BaseTaskStatus{
 			Result: "pending",
 		},
 	}
 
-	json_b, err := json.Marshal(taskStatus)
-	if err != nil {
+	if err := rd.PushStatusIntoRedis(ctx, taskId, taskStatus, time.Hour); err != nil {
 		return "", err
 	}
 
-	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
-		return "", err
-	}
-
-	data := shared.CreateNoteData{
+	data := shared.GetNoteData{
 		BaseTaskData: shared.BaseTaskData{
 			Login:  *username,
 			TaskId: taskId,
 		},
-		Note: shared.Note{
-			Title:   req.Title,
-			Content: req.Content,
-		},
+		Offset: int(req.Offset),
+		Count:  int(req.Count),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -51,7 +44,7 @@ func CreateNote(ctx context.Context, req *pb.Note, username *string) (string, er
 	}
 
 	go func() {
-		kp.KafkaProducer.Produce("create_note", kafka.Message{
+		kp.KafkaProducer.Produce("get_note", kafka.Message{
 			Key:   []byte(taskId),
 			Value: jsonData,
 		})

@@ -2,10 +2,11 @@ package authorization
 
 import (
 	"context"
-	kp "crud/grpc-gateway/kafka"
+	kp "crud/grpc-gateway/kafka_producer"
 	pb_auth_gate "crud/grpc-gateway/proto/auth_gate"
 	pb_main_gate "crud/grpc-gateway/proto/gate"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	rd "crud/common-libs/redis"
-
 	shared "crud/common-libs/shared"
 )
 
@@ -40,8 +40,8 @@ func InitAuthGateClient() error {
 	return nil
 }
 
-func createTaskGetAuth(ctx context.Context, req *pb_main_gate.AuthRequest) (string, error) {
-	taskId := "getAuthorization_task:" + uuid.New().String()
+func createTaskGetAuth(ctx context.Context, req *pb_main_gate.AuthRequest, username string) (string, error) {
+	taskId := fmt.Sprintf("%s:getAuthorization_task:%s", username, uuid.New().String())
 
 	taskStatus := shared.AuthorizationCheckStatus{
 		BaseTaskStatus: shared.BaseTaskStatus{
@@ -49,12 +49,7 @@ func createTaskGetAuth(ctx context.Context, req *pb_main_gate.AuthRequest) (stri
 		},
 	}
 
-	json_b, err := json.Marshal(taskStatus)
-	if err != nil {
-		return "", err
-	}
-
-	if err := rd.Client.Set(ctx, taskId, json_b, time.Hour*1).Err(); err != nil {
+	if err := rd.PushStatusIntoRedis(ctx, taskId, taskStatus, time.Hour); err != nil {
 		return "", err
 	}
 
@@ -72,7 +67,7 @@ func createTaskGetAuth(ctx context.Context, req *pb_main_gate.AuthRequest) (stri
 	}
 
 	kp.KafkaProducer.Produce("get_authorizations", kafka.Message{
-		Key:   []byte(req.Login),
+		Key:   []byte(taskId),
 		Value: jsonData,
 	})
 
@@ -82,7 +77,7 @@ func createTaskGetAuth(ctx context.Context, req *pb_main_gate.AuthRequest) (stri
 func (s *AuthServer) GetAuthorization(ctx context.Context, req *pb_main_gate.AuthRequest) (*pb_main_gate.TaskResponse, error) {
 	log.Println("New auth request!")
 
-	taskId, err := createTaskGetAuth(ctx, req)
+	taskId, err := createTaskGetAuth(ctx, req, req.Login)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Internal server error: %v", err)
 	}
@@ -93,30 +88,33 @@ func (s *AuthServer) GetAuthorization(ctx context.Context, req *pb_main_gate.Aut
 	}, nil
 }
 
-func CheckAuthorization(ctx context.Context) (string, error) {
+func CheckAuthorization(ctx *context.Context) error {
 	log.Println("CheckAuthorization -> metadata start")
-	md, ok := metadata.FromIncomingContext(ctx)
+	md, ok := metadata.FromIncomingContext(*ctx)
 	if !ok {
-		return "", status.Errorf(codes.Unauthenticated, "missing metadata")
+		return status.Errorf(codes.Unauthenticated, "missing metadata")
 	}
 
 	authHeader, ok := md["authorization"]
 	if !ok || len(authHeader) == 0 {
-		return "", status.Errorf(codes.Unauthenticated, "missing authorization token")
+		return status.Errorf(codes.Unauthenticated, "missing authorization token")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	newCtx, cancel := context.WithTimeout(*ctx, 5*time.Second)
 	defer cancel()
 
 	res, err := AuthClient.CheckAuthorization(
-		ctx,
+		newCtx,
 		&pb_auth_gate.AuthCheckRequest{
 			JwtToken: strings.Join(authHeader, ""),
 		},
 	)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return res.Username, nil
+	*ctx = context.WithValue(*ctx, "username", res.Username)
+	*ctx = context.WithValue(*ctx, "uid", res.Uid)
+
+	return nil
 }

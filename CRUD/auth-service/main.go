@@ -32,7 +32,7 @@ type authserver struct {
 }
 
 func (s *authserver) CheckAuthorization(ctx context.Context, req *pb.AuthCheckRequest) (*pb.AuthCheckResponse, error) {
-	username, err := authCheck.CheckAuthorization(ctx, req)
+	err := authCheck.CheckAuthorization(&ctx, req)
 	if err != nil {
 		return &pb.AuthCheckResponse{
 			Status: false,
@@ -41,7 +41,8 @@ func (s *authserver) CheckAuthorization(ctx context.Context, req *pb.AuthCheckRe
 
 	return &pb.AuthCheckResponse{
 		Status:   true,
-		Username: username,
+		Username: ctx.Value("username").(string),
+		Uid:      ctx.Value("uid").(string),
 	}, nil
 }
 
@@ -102,7 +103,6 @@ func main() {
 				}
 
 				err = reg.Register(context.Background(), data)
-
 				if err != nil {
 					log.Printf("failed to register user: %v", err)
 
@@ -110,14 +110,13 @@ func main() {
 					status.Info = err.Error()
 				}
 
-				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
-				} else {
-					log.Printf("failed to marshal status info")
+				err = rd.PushStatusIntoRedis(context.Background(), data.TaskId, status, time.Hour)
+				if err != nil {
+					log.Printf("failed to push status into redis: %v", err)
 				}
 			}(data)
 
-			fmt.Printf("Получено сообщение: %v\n", data)
+			log.Printf("Получено сообщение: %v", data)
 
 			err = reader.CommitMessages(context.Background(), message)
 			if err != nil {
@@ -157,10 +156,9 @@ func main() {
 					status.Info = token
 				}
 
-				if json_data, err := json.Marshal(status); err == nil {
-					rd.PushStatusIntoRedis(context.Background(), data.TaskId, json_data, time.Hour)
-				} else {
-					log.Printf("failed to marshal status info")
+				err = rd.PushStatusIntoRedis(context.Background(), data.TaskId, status, time.Hour)
+				if err != nil {
+					log.Printf("failed to push status into redis: %v", err)
 				}
 			}(data)
 
