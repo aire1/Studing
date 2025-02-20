@@ -88,30 +88,33 @@ func (s *AuthServer) GetAuthorization(ctx context.Context, req *pb_main_gate.Aut
 	}, nil
 }
 
-func CheckAuthorization(ctx context.Context) (string, error) {
+func CheckAuthorization(ctx *context.Context) error {
 	log.Println("CheckAuthorization -> metadata start")
-	md, ok := metadata.FromIncomingContext(ctx)
+	md, ok := metadata.FromIncomingContext(*ctx)
 	if !ok {
-		return "", status.Errorf(codes.Unauthenticated, "missing metadata")
+		return status.Errorf(codes.Unauthenticated, "missing metadata")
 	}
 
 	authHeader, ok := md["authorization"]
 	if !ok || len(authHeader) == 0 {
-		return "", status.Errorf(codes.Unauthenticated, "missing authorization token")
+		return status.Errorf(codes.Unauthenticated, "missing authorization token")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	newCtx, cancel := context.WithTimeout(*ctx, 5*time.Second)
 	defer cancel()
 
 	res, err := AuthClient.CheckAuthorization(
-		ctx,
+		newCtx,
 		&pb_auth_gate.AuthCheckRequest{
 			JwtToken: strings.Join(authHeader, ""),
 		},
 	)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return res.Username, nil
+	*ctx = context.WithValue(*ctx, "username", res.Username)
+	*ctx = context.WithValue(*ctx, "uid", res.Uid)
+
+	return nil
 }
