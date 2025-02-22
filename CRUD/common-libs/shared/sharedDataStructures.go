@@ -3,11 +3,12 @@ package shared
 //типы формата *Data - это типы для Kafka
 
 type Note struct {
-	Id           int    `json:"id"`
-	UserId       string `json:"UserId"`
-	Title        string `json:"title"`
-	Content      string `json:"content"`
-	CreationDate string `json:"creationDate"`
+	Id        int    `json:"id"`
+	UserId    string `json:"UserId"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // Базовая структура для Kafka, поля которой, так или иначе, содержат все сообщения

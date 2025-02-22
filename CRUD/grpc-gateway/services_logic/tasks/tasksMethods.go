@@ -5,7 +5,6 @@ import (
 	pb "crud/grpc-gateway/proto/gate"
 	"fmt"
 	"log"
-	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,22 +20,47 @@ type TaskData interface {
 	SetLogin(username string)
 }
 
-func setTaskResponse(taskId string, v interface{}) (*pb.TaskResponse, error) {
+func setTaskResponse(ctx context.Context, taskId string, v interface{}) (*pb.TaskResponse, error) {
 	var pbResponse pb.TaskResponse
 
+	err := shared.ParseKeyToContext(&ctx, taskId)
+	if err != nil {
+		return nil, err
+	}
+
+	var prefix = ctx.Value(shared.PrefixKey).(string)
+
 	switch {
-	case strings.HasPrefix(taskId, shared.RegistrationStatusPrefix):
+	case prefix == shared.RegistrationStatusPrefix:
 		pbResponse.Status = v.(*shared.RegistrationStatus).Result
 		pbResponse.Info = v.(*shared.RegistrationStatus).Info
-	case strings.HasPrefix(taskId, shared.AuthorizationGetStatusPrefix):
+	case prefix == shared.AuthorizationGetStatusPrefix:
 		pbResponse.Status = v.(*shared.AuthorizationGetStatus).Result
 		pbResponse.Info = v.(*shared.AuthorizationGetStatus).Info
-	case strings.HasPrefix(taskId, shared.AuthorizationCheckStatusPrefix):
+	case prefix == shared.AuthorizationCheckStatusPrefix:
 		pbResponse.Status = v.(*shared.AuthorizationCheckStatus).Result
 		pbResponse.Info = v.(*shared.AuthorizationCheckStatus).Info
-	case strings.HasPrefix(taskId, shared.CreateNoteStatusPrefix):
+	case prefix == shared.CreateNoteStatusPrefix:
 		pbResponse.Status = v.(*shared.CreateNoteStatus).Result
 		pbResponse.Info = v.(*shared.CreateNoteStatus).Info
+	case prefix == shared.GetNoteStatusPrefix:
+		pbResponse.Status = v.(*shared.GetNoteStatus).Result
+		pbResponse.Info = v.(*shared.GetNoteStatus).Info
+		notes := v.(*shared.GetNoteStatus).Notes
+		for _, note := range notes {
+			pbResponse.Data = &pb.TaskResponse_NoteResponse{
+				NoteResponse: &pb.NoteResponse{
+					Note: append(pbResponse.Data.(*pb.TaskResponse_NoteResponse).NoteResponse.Note, &pb.Note{
+						Id:        fmt.Sprint(note.Id),
+						Title:     note.Title,
+						Content:   note.Content,
+						CreatedAt: note.CreatedAt,
+						UpdatedAt: note.UpdatedAt,
+					}),
+				},
+			}
+		}
+
 	default:
 		return nil, fmt.Errorf("unknown task prefix")
 	}
@@ -52,12 +76,5 @@ func (s *TasksServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest, us
 		return nil, status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
-	prefix, err := shared.GetStatusPrefix(req.Taskid)
-	if err != nil {
-		return nil, err
-	} else if prefix == "" {
-		return nil, fmt.Errorf("prefix is nil")
-	}
-
-	return setTaskResponse(prefix, v)
+	return setTaskResponse(ctx, req.Taskid, v)
 }

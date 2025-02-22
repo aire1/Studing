@@ -243,7 +243,7 @@ func (m *TaskResponse) GetData() isTaskResponse_Data {
 	return nil
 }
 
-func (x *TaskResponse) GetNoteResponse() *NoteResponce {
+func (x *TaskResponse) GetNoteResponse() *NoteResponse {
 	if x, ok := x.GetData().(*TaskResponse_NoteResponse); ok {
 		return x.NoteResponse
 	}
@@ -255,7 +255,7 @@ type isTaskResponse_Data interface {
 }
 
 type TaskResponse_NoteResponse struct {
-	NoteResponse *NoteResponce `protobuf:"bytes,3,opt,name=noteResponse,proto3,oneof"`
+	NoteResponse *NoteResponse `protobuf:"bytes,3,opt,name=noteResponse,proto3,oneof"`
 }
 
 func (*TaskResponse_NoteResponse) isTaskResponse_Data() {}
@@ -323,7 +323,7 @@ func (x *NoteRequest) GetId() uint64 {
 	return 0
 }
 
-type NoteResponce struct {
+type NoteResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -331,8 +331,8 @@ type NoteResponce struct {
 	Note []*Note `protobuf:"bytes,1,rep,name=note,proto3" json:"note,omitempty"`
 }
 
-func (x *NoteResponce) Reset() {
-	*x = NoteResponce{}
+func (x *NoteResponse) Reset() {
+	*x = NoteResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_gate_gate_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -340,13 +340,13 @@ func (x *NoteResponce) Reset() {
 	}
 }
 
-func (x *NoteResponce) String() string {
+func (x *NoteResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*NoteResponce) ProtoMessage() {}
+func (*NoteResponse) ProtoMessage() {}
 
-func (x *NoteResponce) ProtoReflect() protoreflect.Message {
+func (x *NoteResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_gate_gate_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -358,12 +358,12 @@ func (x *NoteResponce) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use NoteResponce.ProtoReflect.Descriptor instead.
-func (*NoteResponce) Descriptor() ([]byte, []int) {
+// Deprecated: Use NoteResponse.ProtoReflect.Descriptor instead.
+func (*NoteResponse) Descriptor() ([]byte, []int) {
 	return file_proto_gate_gate_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *NoteResponce) GetNote() []*Note {
+func (x *NoteResponse) GetNote() []*Note {
 	if x != nil {
 		return x.Note
 	}
@@ -470,7 +470,7 @@ var file_proto_gate_gate_proto_rawDesc = []byte{
 	0x75, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x69, 0x6e, 0x66, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
 	0x52, 0x04, 0x69, 0x6e, 0x66, 0x6f, 0x12, 0x38, 0x0a, 0x0c, 0x6e, 0x6f, 0x74, 0x65, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x67,
-	0x61, 0x74, 0x65, 0x2e, 0x4e, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x63, 0x65,
+	0x61, 0x74, 0x65, 0x2e, 0x4e, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x48, 0x00, 0x52, 0x0c, 0x6e, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x42, 0x06, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x4b, 0x0a, 0x0b, 0x4e, 0x6f, 0x74, 0x65,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65,
@@ -478,7 +478,7 @@ var file_proto_gate_gate_proto_rawDesc = []byte{
 	0x14, 0x0a, 0x05, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05,
 	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28,
 	0x04, 0x52, 0x02, 0x69, 0x64, 0x22, 0x2e, 0x0a, 0x0c, 0x4e, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x63, 0x65, 0x12, 0x1e, 0x0a, 0x04, 0x6e, 0x6f, 0x74, 0x65, 0x18, 0x01, 0x20,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1e, 0x0a, 0x04, 0x6e, 0x6f, 0x74, 0x65, 0x18, 0x01, 0x20,
 	0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x67, 0x61, 0x74, 0x65, 0x2e, 0x4e, 0x6f, 0x74, 0x65, 0x52,
 	0x04, 0x6e, 0x6f, 0x74, 0x65, 0x22, 0x84, 0x01, 0x0a, 0x04, 0x4e, 0x6f, 0x74, 0x65, 0x12, 0x0e,
 	0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x14,
@@ -529,12 +529,12 @@ var file_proto_gate_gate_proto_goTypes = []interface{}{
 	(*TaskRequest)(nil),     // 2: gate.TaskRequest
 	(*TaskResponse)(nil),    // 3: gate.TaskResponse
 	(*NoteRequest)(nil),     // 4: gate.NoteRequest
-	(*NoteResponce)(nil),    // 5: gate.NoteResponce
+	(*NoteResponse)(nil),    // 5: gate.NoteResponse
 	(*Note)(nil),            // 6: gate.Note
 }
 var file_proto_gate_gate_proto_depIdxs = []int32{
-	5, // 0: gate.TaskResponse.noteResponse:type_name -> gate.NoteResponce
-	6, // 1: gate.NoteResponce.note:type_name -> gate.Note
+	5, // 0: gate.TaskResponse.noteResponse:type_name -> gate.NoteResponse
+	6, // 1: gate.NoteResponse.note:type_name -> gate.Note
 	0, // 2: gate.Gate.GetAuthorization:input_type -> gate.AuthRequest
 	1, // 3: gate.Gate.Register:input_type -> gate.RegisterRequest
 	4, // 4: gate.Gate.GetNotes:input_type -> gate.NoteRequest
@@ -619,7 +619,7 @@ func file_proto_gate_gate_proto_init() {
 			}
 		}
 		file_proto_gate_gate_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NoteResponce); i {
+			switch v := v.(*NoteResponse); i {
 			case 0:
 				return &v.state
 			case 1:

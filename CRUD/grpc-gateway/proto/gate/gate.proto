@@ -29,7 +29,7 @@ message TaskResponse {
     string status = 1;
     string info = 2;
     oneof data {
-        NoteResponce noteResponse = 3;
+        NoteResponse noteResponse = 3;
     }
 }
 
@@ -39,7 +39,7 @@ message NoteRequest {
     uint64 id = 3;
 }
 
-message NoteResponce {
+message NoteResponse {
     repeated Note note = 1;
 }
 

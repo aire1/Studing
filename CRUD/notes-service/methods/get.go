@@ -20,7 +20,6 @@ func get(ctx context.Context, username, offset, count int) (*[]shared.Note, erro
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Release()
 
 	query, args, err := sq.Select("id, name, text, created_at").
 		From("public.notes").

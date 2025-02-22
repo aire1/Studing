@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	rd "crud/common-libs/redis"
+	shared "crud/common-libs/shared"
 	kafka "crud/grpc-gateway/kafka_producer"
 	pb "crud/grpc-gateway/proto/gate"
 	auth "crud/grpc-gateway/services_logic/authorization"
@@ -25,17 +26,17 @@ type GateServer struct {
 }
 
 func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*pb.TaskResponse, error) {
-	// var (
-	// 	err      error
-	// 	username string
-	// )
+	err := shared.ParseKeyToContext(&ctx, req.Taskid)
+	if err != nil {
+		return nil, err
+	}
 
-	// if !strings.HasPrefix(req.Taskid, "getAuthorization_task") {
-	// 	username, err = checkAuth(ctx)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	if ctx.Value(shared.PrefixKey).(string) == "getAuthorization_task" {
+		err = auth.CheckAuthorization(ctx) checkAuth(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return s.TasksServer.GetTaskStatus(ctx, req, "anonymous")
 }

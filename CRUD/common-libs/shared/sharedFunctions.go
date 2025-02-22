@@ -26,28 +26,42 @@ var typeMap = map[string]reflect.Type{
 	GetNoteStatusPrefix:            reflect.TypeOf(GetNoteStatus{}),
 }
 
-func GetStatusPrefix(key string) (string, error) {
+// Парсит ключ задачи Redis вида username:prefix:uuid в контекст
+type contextKey string
+
+const (
+	UsernameRedisKey contextKey = "usernameRedis"
+	PrefixKey        contextKey = "prefix"
+	UuidKey          contextKey = "uuid"
+)
+
+func ParseKeyToContext(ctx *context.Context, key string) error {
+	//Ключ задачи в Redis имеет вид: username:prefix:uuid
 	parts := strings.Split(key, ":")
-	if len(parts) < 2 {
-		return "", fmt.Errorf("invalid task id: %s", key)
+	if len(parts) < 3 {
+		return fmt.Errorf("invalid task id: %s", key)
 	}
 
-	return parts[1], nil
+	username, prefix, uuid := parts[0], parts[1], parts[2]
+
+	*ctx = context.WithValue(*ctx, UsernameRedisKey, username)
+	*ctx = context.WithValue(*ctx, PrefixKey, prefix)
+	*ctx = context.WithValue(*ctx, UuidKey, uuid)
+
+	return nil
 }
 
 func GetTaskFromRedis(client *redis.Client, ctx context.Context, key string) (TaskStatus, error) {
-	prefix, err := GetStatusPrefix(key)
+	err := ParseKeyToContext(&ctx, key)
 	if err != nil {
 		return nil, err
-	} else if prefix == "" {
-		return nil, fmt.Errorf("prefix is nil")
 	}
 
 	var v TaskStatus
-	if typ, ok := typeMap[prefix]; ok {
+	if typ, ok := typeMap[ctx.Value(PrefixKey).(string)]; ok {
 		v = reflect.New(typ).Interface().(TaskStatus)
 	} else {
-		return nil, fmt.Errorf("unknown prefix: %s", prefix)
+		return nil, fmt.Errorf("unknown prefix: %s", ctx.Value(PrefixKey).(string))
 	}
 
 	if err := UnmarshalFromRedis(client, ctx, key, v); err != nil {
