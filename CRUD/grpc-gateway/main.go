@@ -31,14 +31,14 @@ func (s *GateServer) GetTaskStatus(ctx context.Context, req *pb.TaskRequest) (*p
 		return nil, err
 	}
 
-	if ctx.Value(shared.PrefixKey).(string) == "getAuthorization_task" {
-		err = auth.CheckAuthorization(ctx) checkAuth(ctx)
+	if ctx.Value(shared.PrefixKey).(string) != "getAuthorization_task" {
+		err = auth.CheckAuthorization(&ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return s.TasksServer.GetTaskStatus(ctx, req, "anonymous")
+	return s.TasksServer.GetTaskStatus(ctx, req)
 }
 
 func (s *GateServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.TaskResponse, error) {
@@ -56,6 +56,15 @@ func (s *GateServer) CreateNote(ctx context.Context, req *pb.Note) (*pb.TaskResp
 	}
 
 	return s.NotesServer.CreateNote(ctx, req)
+}
+
+func (s *GateServer) GetNotes(ctx context.Context, req *pb.NoteRequest) (*pb.TaskResponse, error) {
+	err := auth.CheckAuthorization(&ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.NotesServer.GetNotes(ctx, req)
 }
 
 func main() {

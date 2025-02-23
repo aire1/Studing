@@ -33,6 +33,7 @@ const (
 	UsernameRedisKey contextKey = "usernameRedis"
 	PrefixKey        contextKey = "prefix"
 	UuidKey          contextKey = "uuid"
+	UsernameKey      contextKey = "username"
 )
 
 func ParseKeyToContext(ctx *context.Context, key string) error {
@@ -52,11 +53,6 @@ func ParseKeyToContext(ctx *context.Context, key string) error {
 }
 
 func GetTaskFromRedis(client *redis.Client, ctx context.Context, key string) (TaskStatus, error) {
-	err := ParseKeyToContext(&ctx, key)
-	if err != nil {
-		return nil, err
-	}
-
 	var v TaskStatus
 	if typ, ok := typeMap[ctx.Value(PrefixKey).(string)]; ok {
 		v = reflect.New(typ).Interface().(TaskStatus)

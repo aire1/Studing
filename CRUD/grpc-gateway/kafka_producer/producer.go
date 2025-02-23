@@ -72,7 +72,7 @@ func (p *Producer) Close() {
 
 func Init() {
 	brokers := []string{"localhost:19092", "localhost:19094", "localhost:19096"}
-	topics := []string{"registrations", "get_authorizations", "check_authorizations", "create_note"}
+	topics := []string{"registrations", "get_authorizations", "check_authorizations", "create_note", "get_note"}
 
 	KafkaProducer = NewProducer(brokers, topics)
 }
