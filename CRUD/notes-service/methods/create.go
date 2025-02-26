@@ -16,7 +16,7 @@ func create(ctx context.Context, note shared.Note) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer conn.Release() // Release the connection back to the pool
+	defer conn.Release()
 
 	query, args, err := sq.Select("id").
 		From("public.users").

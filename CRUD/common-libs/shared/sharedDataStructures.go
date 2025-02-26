@@ -42,3 +42,13 @@ type GetNoteData struct {
 	Offset int
 	Count  int
 }
+
+type DeleteNoteData struct {
+	BaseTaskData
+	NoteId int
+}
+
+type UpdateNoteData struct {
+	BaseTaskData
+	Note
+}

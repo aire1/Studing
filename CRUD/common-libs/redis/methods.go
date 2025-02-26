@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"time"
 )
 
@@ -15,6 +16,8 @@ func PushStatusIntoRedis(ctx context.Context, key string, value interface{}, exp
 	if err := Client.Set(ctx, key, json_b, time.Hour*1).Err(); err != nil {
 		return err
 	}
+
+	log.Printf("Pushed status into redis: %v", value)
 
 	return nil
 }

@@ -46,111 +46,164 @@ func main() {
 
 	log.Println("Подключился к Kafka")
 
-	go func(reader *kafka.Reader) {
-		var data shared.CreateNoteData
-		for {
-			ctx := context.Background()
-			message, err := reader.FetchMessage(ctx)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = json.Unmarshal(message.Value, &data)
-			if err != nil {
-				log.Printf("failed to unmarshal message: %v", err)
-				continue
-			}
-
-			go func(data shared.CreateNoteData) {
-				status := shared.CreateNoteStatus{
-					BaseTaskStatus: shared.BaseTaskStatus{
-						Result: "success",
-						Info:   "",
-					},
-				}
-
-				id, err := methods.Create(ctx, data)
-				if err != nil {
-					status.Result = "error"
-					status.Info = err.Error()
-				} else {
-					status.Result = "success"
-					status.Info = id
-				}
-
-				err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
-				if err != nil {
-					log.Printf("failed to push status into redis: %v", err)
-				}
-			}(data)
-
-			log.Printf("Получено сообщение: %v", data)
-			err = reader.CommitMessages(ctx, message)
-			if err != nil {
-				log.Printf("failed to commit message: %v", err)
-			}
-		}
-	}(reader_create)
-
-	go func(reader *kafka.Reader) {
-		var data shared.GetNoteData
-		for {
-			message, err := reader.FetchMessage(context.Background())
-
-			// err = reader.CommitMessages(ctx, message)
-			// if err != nil {
-			// 	log.Printf("failed to commit message: %v", err)
-			// }
-
-			// continue
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = json.Unmarshal(message.Value, &data)
-			if err != nil {
-				log.Printf("failed to unmarshal message: %v", err)
-				continue
-			}
-
-			go func(data shared.GetNoteData) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Hour*24)
-
-				status := shared.GetNoteStatus{
-					BaseTaskStatus: shared.BaseTaskStatus{
-						Result: "success",
-						Info:   "",
-					},
-				}
-
-				notes, err := methods.Get(ctx, data)
-				if err != nil {
-					status.Result = "error"
-					status.Info = err.Error()
-				} else if notes == nil {
-					status.Info = "no rows in result set"
-				} else {
-					status.Result = "success"
-					status.Notes = *notes
-				}
-
-				err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
-				if err != nil {
-					log.Printf("failed to push status into redis: %v", err)
-				}
-
-				cancel()
-			}(data)
-
-			log.Printf("Получено сообщение: %v", data)
-			err = reader.CommitMessages(context.Background(), message)
-			if err != nil {
-				log.Printf("failed to commit message: %v", err)
-			}
-		}
-	}(reader_get)
+	go processMessages(reader_create, handleCreateNote)
+	go processMessages(reader_get, handleGetNote)
 
 	select {}
+}
+
+func processMessages(reader *kafka.Reader, handler func(context.Context, []byte) error) {
+	for {
+		message, err := reader.FetchMessage(context.Background())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = handler(context.Background(), message.Value)
+		if err != nil {
+			log.Printf("failed to handle message: %v", err)
+			continue
+		}
+
+		err = reader.CommitMessages(context.Background(), message)
+		if err != nil {
+			log.Printf("failed to commit message: %v", err)
+		}
+	}
+}
+
+func handleCreateNote(ctx context.Context, message []byte) error {
+	var data shared.CreateNoteData
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour*24)
+	defer cancel()
+
+	status := shared.CreateNoteStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "success",
+			Info:   "",
+		},
+	}
+
+	id, err := methods.Create(ctx, data)
+	if err != nil {
+		status.Result = "error"
+		status.Info = err.Error()
+	} else {
+		status.Result = "success"
+		status.Info = id
+	}
+
+	err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
+	if err != nil {
+		log.Printf("failed to push status into redis: %v", err)
+	}
+
+	return nil
+}
+
+func handleGetNote(ctx context.Context, message []byte) error {
+	var data shared.GetNoteData
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour*24)
+	defer cancel()
+
+	status := shared.GetNoteStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "success",
+			Info:   "",
+		},
+	}
+
+	notes, err := methods.Get(ctx, data)
+	if err != nil {
+		status.Result = "error"
+		status.Info = err.Error()
+	} else if notes == nil {
+		status.Info = "no rows in result set"
+	} else {
+		status.Result = "success"
+		status.Notes = *notes
+	}
+
+	err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
+	if err != nil {
+		log.Printf("failed to push status into redis: %v", err)
+	}
+
+	return nil
+}
+
+func handleDeleteNote(ctx context.Context, message []byte) error {
+	var data shared.DeleteNoteData
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour*24)
+	defer cancel()
+
+	status := shared.DeleteNoteStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "success",
+			Info:   "",
+		},
+	}
+
+	err = methods.Delete(ctx, data)
+	if err != nil {
+		status.Result = "error"
+		status.Info = err.Error()
+	} else {
+		status.Result = "success"
+	}
+
+	err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
+	if err != nil {
+		log.Printf("failed to push status into redis: %v", err)
+	}
+
+	return nil
+}
+
+func handleUpdateNote(ctx context.Context, message []byte) error {
+	var data shared.UpdateNoteData
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour*24)
+	defer cancel()
+
+	status := shared.UpdateNoteStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "success",
+			Info:   "",
+		},
+	}
+
+	err = methods.Update(ctx, data)
+	if err != nil {
+		status.Result = "error"
+		status.Info = err.Error()
+	} else {
+		status.Result = "success"
+	}
+
+	err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
+	if err != nil {
+		log.Printf("failed to push status into redis: %v", err)
+	}
+
+	return nil
 }

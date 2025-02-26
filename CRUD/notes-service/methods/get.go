@@ -41,7 +41,7 @@ func get(ctx context.Context, offset, count int) (*[]shared.Note, error) {
 		return nil, err
 	}
 
-	query, args, err = sq.Select("id, name, text, created_at::text").
+	query, args, err = sq.Select("id, name, text, created_at::text, owner_id").
 		From("public.notes").
 		Where(
 			sq.Eq{"owner_id": uid},
@@ -64,7 +64,7 @@ func get(ctx context.Context, offset, count int) (*[]shared.Note, error) {
 	var note = shared.Note{}
 	for res.Next() {
 		note = shared.Note{}
-		if err := res.Scan(&note.Id, &note.Title, &note.Content, &note.CreatedAt); err != nil {
+		if err := res.Scan(&note.Id, &note.Title, &note.Content, &note.CreatedAt, &note.UserId); err != nil {
 			return nil, err
 		}
 

@@ -39,3 +39,11 @@ type GetNoteStatus struct {
 	BaseTaskStatus
 	Notes []Note
 }
+
+type DeleteNoteStatus struct {
+	BaseTaskStatus
+}
+
+type UpdateNoteStatus struct {
+	BaseTaskStatus
+}

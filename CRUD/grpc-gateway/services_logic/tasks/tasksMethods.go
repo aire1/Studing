@@ -48,17 +48,20 @@ func setTaskResponse(ctx context.Context, taskId string, v interface{}) (*pb.Tas
 		pbResponse.Info = v.(*shared.GetNoteStatus).Info
 		notes := v.(*shared.GetNoteStatus).Notes
 		for _, note := range notes {
-			pbResponse.Data = &pb.TaskResponse_NoteResponse{
-				NoteResponse: &pb.NoteResponse{
-					Note: append(pbResponse.Data.(*pb.TaskResponse_NoteResponse).NoteResponse.Note, &pb.Note{
-						Id:        fmt.Sprint(note.Id),
-						Title:     note.Title,
-						Content:   note.Content,
-						CreatedAt: note.CreatedAt,
-						UpdatedAt: note.UpdatedAt,
-					}),
-				},
+			if pbResponse.Data == nil {
+				pbResponse.Data = &pb.TaskResponse_NoteResponse{
+					NoteResponse: &pb.NoteResponse{
+						Note: []*pb.Note{},
+					},
+				}
 			}
+			pbResponse.Data.(*pb.TaskResponse_NoteResponse).NoteResponse.Note = append(pbResponse.Data.(*pb.TaskResponse_NoteResponse).NoteResponse.Note, &pb.Note{
+				Id:        fmt.Sprint(note.Id),
+				Title:     note.Title,
+				Content:   note.Content,
+				CreatedAt: note.CreatedAt,
+				UpdatedAt: note.UpdatedAt,
+			})
 		}
 
 	default:
