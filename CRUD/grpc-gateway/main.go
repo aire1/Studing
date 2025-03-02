@@ -67,6 +67,24 @@ func (s *GateServer) GetNotes(ctx context.Context, req *pb.NoteRequest) (*pb.Tas
 	return s.NotesServer.GetNotes(ctx, req)
 }
 
+func (s *GateServer) DeleteNote(ctx context.Context, req *pb.Note) (*pb.TaskResponse, error) {
+	err := auth.CheckAuthorization(&ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.NotesServer.DeleteNote(ctx, req)
+}
+
+func (s *GateServer) UpdateNote(ctx context.Context, req *pb.Note) (*pb.TaskResponse, error) {
+	err := auth.CheckAuthorization(&ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.NotesServer.UpdateNote(ctx, req)
+}
+
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 

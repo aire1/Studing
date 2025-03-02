@@ -3,7 +3,7 @@ package shared
 //типы формата *Data - это типы для Kafka
 
 type Note struct {
-	Id        int    `json:"id"`
+	Id        int64  `json:"id"`
 	UserId    string `json:"UserId"`
 	Title     string `json:"title"`
 	Content   string `json:"content"`
@@ -45,7 +45,7 @@ type GetNoteData struct {
 
 type DeleteNoteData struct {
 	BaseTaskData
-	NoteId int
+	NoteId int64
 }
 
 type UpdateNoteData struct {

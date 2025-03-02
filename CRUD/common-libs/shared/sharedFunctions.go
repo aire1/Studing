@@ -16,6 +16,8 @@ const (
 	AuthorizationCheckStatusPrefix = "checkAuthorization_task"
 	CreateNoteStatusPrefix         = "createNote_task"
 	GetNoteStatusPrefix            = "getNote_task"
+	UpdateNoteStatusPrefix         = "updateNote_task"
+	DeleteNoteStatusPrefix         = "deleteNote_task"
 )
 
 var typeMap = map[string]reflect.Type{

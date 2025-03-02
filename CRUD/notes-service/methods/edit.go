@@ -30,7 +30,7 @@ func update(ctx context.Context, note shared.Note) error {
 		return err
 	}
 
-	if err := conn.QueryRow(ctx, query, args...).Scan(); err != nil {
+	if err := conn.QueryRow(ctx, query, args...).Scan(); err != nil && err.Error() != "no rows in result set" {
 		logger.LogWithCaller(fmt.Sprintf("Error executing SQL: %v", err))
 		return err
 	}

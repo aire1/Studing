@@ -32,6 +32,7 @@ func main() {
 		CommitInterval: time.Second,
 	})
 	defer reader_create.Close()
+
 	reader_get := kafka.NewReader(kafka.ReaderConfig{
 		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
 		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
@@ -44,10 +45,36 @@ func main() {
 	})
 	defer reader_get.Close()
 
+	reader_update := kafka.NewReader(kafka.ReaderConfig{
+		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
+		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
+		Topic:          "update_note",
+		GroupID:        "Notes-service",
+		MinBytes:       10e3,
+		MaxBytes:       10e6,
+		MaxWait:        500 * time.Millisecond,
+		CommitInterval: time.Second,
+	})
+	defer reader_update.Close()
+
+	delete_update := kafka.NewReader(kafka.ReaderConfig{
+		//Brokers:        []string{"kafka1:9092", "kafka2:9092", "kafka3:9092"},
+		Brokers:        []string{"localhost:19092", "localhost:19094", "localhost:19096"},
+		Topic:          "delete_note",
+		GroupID:        "Notes-service",
+		MinBytes:       10e3,
+		MaxBytes:       10e6,
+		MaxWait:        500 * time.Millisecond,
+		CommitInterval: time.Second,
+	})
+	defer delete_update.Close()
+
 	log.Println("Подключился к Kafka")
 
 	go processMessages(reader_create, handleCreateNote)
 	go processMessages(reader_get, handleGetNote)
+	go processMessages(reader_update, handleUpdateNote)
+	go processMessages(delete_update, handleDeleteNote)
 
 	select {}
 }

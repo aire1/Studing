@@ -6,9 +6,11 @@ option go_package = "/proto/gate;gate";
 service Gate {
     rpc GetAuthorization(AuthRequest) returns (TaskResponse);
     rpc Register(RegisterRequest) returns (TaskResponse);
-    rpc GetNotes(NoteRequest) returns (TaskResponse);
     rpc GetTaskStatus(TaskRequest) returns (TaskResponse);
+    rpc GetNotes(NoteRequest) returns (TaskResponse);
     rpc CreateNote(Note) returns (TaskResponse);
+    rpc DeleteNote(Note) returns (TaskResponse);
+    rpc UpdateNote(Note) returns (TaskResponse);
 }
 
 message AuthRequest {
@@ -44,7 +46,7 @@ message NoteResponse {
 }
 
 message Note {
-    string id = 1;
+    int64 id = 1;
     string title = 2;
     string content = 3;
     string created_at = 4;

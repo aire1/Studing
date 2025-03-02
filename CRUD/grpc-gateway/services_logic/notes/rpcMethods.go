@@ -105,3 +105,83 @@ func (s *NotesServer) GetNotes(ctx context.Context, req *pb.NoteRequest) (*pb.Ta
 		Info:   taskId,
 	}, nil
 }
+
+func (s *NotesServer) UpdateNote(ctx context.Context, req *pb.Note) (*pb.TaskResponse, error) {
+	username := ctx.Value("username").(string)
+
+	data := shared.UpdateNoteData{}
+
+	if req.Title == "" {
+		return nil, status.Error(codes.InvalidArgument, "title is empty")
+	} else if req.Content == "" {
+		return nil, status.Error(codes.InvalidArgument, "content is empty")
+	}
+
+	taskId := fmt.Sprintf("%s:updateNote_task:%s", username, uuid.New().String())
+	taskStatus := shared.UpdateNoteStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "pending",
+		},
+	}
+
+	if err := rd.PushStatusIntoRedis(ctx, taskId, taskStatus, time.Hour); err != nil {
+		return nil, err
+	}
+
+	data.Note.Title = req.Title
+	data.Note.Content = req.Content
+	data.Login = username
+	data.TaskId = taskId
+	data.Note.Id = req.Id
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalf("Failed to marshal data: %v", err)
+	}
+
+	kp.KafkaProducer.Produce("update_note", kafka.Message{
+		Key:   []byte(taskId),
+		Value: jsonData,
+	})
+
+	return &pb.TaskResponse{
+		Status: "created",
+		Info:   taskId,
+	}, nil
+}
+
+func (s *NotesServer) DeleteNote(ctx context.Context, req *pb.Note) (*pb.TaskResponse, error) {
+	username := ctx.Value("username").(string)
+
+	data := shared.DeleteNoteData{}
+
+	taskId := fmt.Sprintf("%s:deleteNote_task:%s", username, uuid.New().String())
+	taskStatus := shared.DeleteNoteStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "pending",
+		},
+	}
+
+	if err := rd.PushStatusIntoRedis(ctx, taskId, taskStatus, time.Hour); err != nil {
+		return nil, err
+	}
+
+	data.Login = username
+	data.TaskId = taskId
+	data.NoteId = req.Id
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalf("Failed to marshal data: %v", err)
+	}
+
+	kp.KafkaProducer.Produce("delete_note", kafka.Message{
+		Key:   []byte(taskId),
+		Value: jsonData,
+	})
+
+	return &pb.TaskResponse{
+		Status: "created",
+		Info:   taskId,
+	}, nil
+}

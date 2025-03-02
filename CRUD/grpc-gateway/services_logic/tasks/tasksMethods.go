@@ -34,15 +34,19 @@ func setTaskResponse(ctx context.Context, taskId string, v interface{}) (*pb.Tas
 	case prefix == shared.RegistrationStatusPrefix:
 		pbResponse.Status = v.(*shared.RegistrationStatus).Result
 		pbResponse.Info = v.(*shared.RegistrationStatus).Info
+
 	case prefix == shared.AuthorizationGetStatusPrefix:
 		pbResponse.Status = v.(*shared.AuthorizationGetStatus).Result
 		pbResponse.Info = v.(*shared.AuthorizationGetStatus).Info
+
 	case prefix == shared.AuthorizationCheckStatusPrefix:
 		pbResponse.Status = v.(*shared.AuthorizationCheckStatus).Result
 		pbResponse.Info = v.(*shared.AuthorizationCheckStatus).Info
+
 	case prefix == shared.CreateNoteStatusPrefix:
 		pbResponse.Status = v.(*shared.CreateNoteStatus).Result
 		pbResponse.Info = v.(*shared.CreateNoteStatus).Info
+
 	case prefix == shared.GetNoteStatusPrefix:
 		pbResponse.Status = v.(*shared.GetNoteStatus).Result
 		pbResponse.Info = v.(*shared.GetNoteStatus).Info
@@ -56,13 +60,20 @@ func setTaskResponse(ctx context.Context, taskId string, v interface{}) (*pb.Tas
 				}
 			}
 			pbResponse.Data.(*pb.TaskResponse_NoteResponse).NoteResponse.Note = append(pbResponse.Data.(*pb.TaskResponse_NoteResponse).NoteResponse.Note, &pb.Note{
-				Id:        fmt.Sprint(note.Id),
+				Id:        int64(note.Id),
 				Title:     note.Title,
 				Content:   note.Content,
 				CreatedAt: note.CreatedAt,
 				UpdatedAt: note.UpdatedAt,
 			})
 		}
+	case prefix == shared.UpdateNoteStatusPrefix:
+		pbResponse.Status = v.(*shared.UpdateNoteStatus).Result
+		pbResponse.Info = v.(*shared.UpdateNoteStatus).Info
+
+	case prefix == shared.DeleteNoteStatusPrefix:
+		pbResponse.Status = v.(*shared.DeleteNoteStatus).Result
+		pbResponse.Info = v.(*shared.DeleteNoteStatus).Info
 
 	default:
 		return nil, fmt.Errorf("unknown task prefix")

@@ -22,6 +22,8 @@ type GateClient interface {
 	GetNotes(ctx context.Context, in *NoteRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	GetTaskStatus(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*TaskResponse, error)
 	CreateNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error)
+	DeleteNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error)
+	UpdateNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error)
 }
 
 type gateClient struct {
@@ -77,6 +79,24 @@ func (c *gateClient) CreateNote(ctx context.Context, in *Note, opts ...grpc.Call
 	return out, nil
 }
 
+func (c *gateClient) DeleteNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error) {
+	out := new(TaskResponse)
+	err := c.cc.Invoke(ctx, "/gate.Gate/DeleteNote", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gateClient) UpdateNote(ctx context.Context, in *Note, opts ...grpc.CallOption) (*TaskResponse, error) {
+	out := new(TaskResponse)
+	err := c.cc.Invoke(ctx, "/gate.Gate/UpdateNote", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GateServer is the server API for Gate service.
 // All implementations must embed UnimplementedGateServer
 // for forward compatibility
@@ -86,6 +106,8 @@ type GateServer interface {
 	GetNotes(context.Context, *NoteRequest) (*TaskResponse, error)
 	GetTaskStatus(context.Context, *TaskRequest) (*TaskResponse, error)
 	CreateNote(context.Context, *Note) (*TaskResponse, error)
+	DeleteNote(context.Context, *Note) (*TaskResponse, error)
+	UpdateNote(context.Context, *Note) (*TaskResponse, error)
 	mustEmbedUnimplementedGateServer()
 }
 
@@ -107,6 +129,12 @@ func (UnimplementedGateServer) GetTaskStatus(context.Context, *TaskRequest) (*Ta
 }
 func (UnimplementedGateServer) CreateNote(context.Context, *Note) (*TaskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
+}
+func (UnimplementedGateServer) DeleteNote(context.Context, *Note) (*TaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteNote not implemented")
+}
+func (UnimplementedGateServer) UpdateNote(context.Context, *Note) (*TaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateNote not implemented")
 }
 func (UnimplementedGateServer) mustEmbedUnimplementedGateServer() {}
 
@@ -211,6 +239,42 @@ func _Gate_CreateNote_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gate_DeleteNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Note)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GateServer).DeleteNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gate.Gate/DeleteNote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GateServer).DeleteNote(ctx, req.(*Note))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Gate_UpdateNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Note)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GateServer).UpdateNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gate.Gate/UpdateNote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GateServer).UpdateNote(ctx, req.(*Note))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Gate_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gate.Gate",
 	HandlerType: (*GateServer)(nil),
@@ -234,6 +298,14 @@ var _Gate_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateNote",
 			Handler:    _Gate_CreateNote_Handler,
+		},
+		{
+			MethodName: "DeleteNote",
+			Handler:    _Gate_DeleteNote_Handler,
+		},
+		{
+			MethodName: "UpdateNote",
+			Handler:    _Gate_UpdateNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

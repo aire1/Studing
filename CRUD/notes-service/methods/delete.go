@@ -10,7 +10,7 @@ import (
 )
 
 // Удаление заметки, либо пометка о удалении
-func delete(ctx context.Context, noteId int, force bool) error {
+func delete(ctx context.Context, noteId int64, force bool) error {
 	conn, err := pg.Pool.Acquire(ctx)
 	if err != nil {
 		return err
