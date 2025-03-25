@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -78,98 +77,10 @@ func main() {
 	})
 	defer reader_auth.Close()
 
+	go processMessages(reader_reg, handleRegistration)
+	go processMessages(reader_auth, handleAuthorization)
+
 	log.Println("Подключился к Kafka")
-
-	go func(reader *kafka.Reader) {
-		var data shared.RegistrationData
-		for {
-			message, err := reader.FetchMessage(context.Background())
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = json.Unmarshal(message.Value, &data)
-			if err != nil {
-				log.Printf("failed to unmarshal message: %v", err)
-				continue
-			}
-
-			go func(data shared.RegistrationData) {
-				status := shared.RegistrationStatus{
-					BaseTaskStatus: shared.BaseTaskStatus{
-						Result: "success",
-						Info:   "",
-					},
-				}
-
-				err = reg.Register(context.Background(), data)
-				if err != nil {
-					log.Printf("failed to register user: %v", err)
-
-					status.Result = "fail"
-					status.Info = err.Error()
-				}
-
-				err = rd.PushStatusIntoRedis(context.Background(), data.TaskId, status, time.Hour)
-				if err != nil {
-					log.Printf("failed to push status into redis: %v", err)
-				}
-			}(data)
-
-			log.Printf("Получено сообщение: %v", data)
-
-			err = reader.CommitMessages(context.Background(), message)
-			if err != nil {
-				log.Printf("failed to commit message: %v", err)
-			}
-		}
-	}(reader_reg)
-
-	go func(reader *kafka.Reader) {
-		var data shared.AuthorizationGetData
-		for {
-			message, err := reader.FetchMessage(context.Background())
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = json.Unmarshal(message.Value, &data)
-			if err != nil {
-				log.Printf("failed to unmarshal message: %v", err)
-				continue
-			}
-
-			go func(data shared.AuthorizationGetData) {
-				status := shared.AuthorizationGetStatus{
-					BaseTaskStatus: shared.BaseTaskStatus{
-						Result: "success",
-						Info:   "",
-					},
-				}
-
-				if token, err := authGet.Authorize(context.Background(), data); err != nil {
-					log.Printf("failed to auth user: %v", err)
-
-					status.Result = "fail"
-					status.Info = err.Error()
-				} else {
-					status.Info = token
-				}
-
-				err = rd.PushStatusIntoRedis(context.Background(), data.TaskId, status, time.Hour)
-				if err != nil {
-					log.Printf("failed to push status into redis: %v", err)
-				}
-			}(data)
-
-			fmt.Printf("Получено сообщение: %v\n", data)
-
-			err = reader.CommitMessages(context.Background(), message)
-			if err != nil {
-				log.Printf("failed to commit message: %v", err)
-			}
-		}
-	}(reader_auth)
 
 	//Создаем сервер gRPC auth-gate
 	go func() {
@@ -188,4 +99,92 @@ func main() {
 	}()
 
 	select {}
+}
+
+func handleAuthorization(ctx context.Context, message []byte) error {
+	var data shared.AuthorizationGetData
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		log.Printf("failed to unmarshal message: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour*24)
+	defer cancel()
+
+	status := shared.AuthorizationGetStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "success",
+			Info:   "",
+		},
+	}
+
+	if token, err := authGet.Authorize(ctx, data); err != nil {
+		log.Printf("failed to auth user: %v", err)
+
+		status.Result = "fail"
+		status.Info = err.Error()
+	} else {
+		status.Info = token
+	}
+
+	err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
+	if err != nil {
+		log.Printf("failed to push status into redis: %v", err)
+	}
+
+	return nil
+}
+
+func handleRegistration(ctx context.Context, message []byte) error {
+	var data shared.RegistrationData
+
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		log.Printf("failed to unmarshal message: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Hour*24)
+	defer cancel()
+
+	status := shared.RegistrationStatus{
+		BaseTaskStatus: shared.BaseTaskStatus{
+			Result: "success",
+			Info:   "",
+		},
+	}
+
+	err = reg.Register(ctx, data)
+	if err != nil {
+		log.Printf("failed to register user: %v", err)
+
+		status.Result = "fail"
+		status.Info = err.Error()
+	}
+
+	err = rd.PushStatusIntoRedis(ctx, data.TaskId, status, time.Hour)
+	if err != nil {
+		log.Printf("failed to push status into redis: %v", err)
+	}
+
+	return nil
+}
+
+func processMessages(reader *kafka.Reader, handler func(context.Context, []byte) error) {
+	for {
+		message, err := reader.FetchMessage(context.Background())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = handler(context.Background(), message.Value)
+		if err != nil {
+			log.Printf("failed to handle message: %v", err)
+			continue
+		}
+
+		err = reader.CommitMessages(context.Background(), message)
+		if err != nil {
+			log.Printf("failed to commit message: %v", err)
+		}
+	}
 }

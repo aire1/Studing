@@ -98,10 +98,11 @@ func main() {
 		log.Fatalf("Ошибка запуска grpc-client: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", ":50050")
+	lis, err := net.Listen("tcp", "127.0.0.1:50050")
 	if err != nil {
 		log.Fatalf("Ошибка запуска grpc-gate: %v", err)
 	}
+
 	s := grpc.NewServer()
 
 	log.Println("grpc-gate запущен на :50050")

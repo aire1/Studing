@@ -11,9 +11,10 @@ var Client *redis.Client
 
 func Init() {
 	Client = redis.NewClient(&redis.Options{
-		Addr:     "redis:6379", // адрес вашего Redis сервера
-		Password: "",           // пароль, если установлен
-		DB:       0,            // используемая база данных
+		//Addr:     "redis:6379",
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
 	})
 
 	_, err := Client.Ping(context.Background()).Result()
